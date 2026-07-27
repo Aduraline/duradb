@@ -20,6 +20,12 @@ cmake --build build
 ./build/duradb
 ```
 
+## Test
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
 ## Development
 
 Install [pre-commit](https://pre-commit.com/) once, then enable git hooks:
@@ -33,7 +39,7 @@ On each commit, hooks will:
 
 - fix trailing whitespace and missing end-of-file newlines
 - run `clang-format` on C++ sources
-- verify the project builds with CMake
+- build the project and run unit tests with CTest
 
 Run hooks manually against all files:
 
@@ -49,6 +55,7 @@ duradb/
 ├── src/
 │   ├── main.cpp
 │   └── frontend/       # SQL frontend (lexer, parser)
+└── tests/              # unit tests (GoogleTest)
 ```
 
 ## License

@@ -23,4 +23,4 @@ repos:
         entry: scripts/pre-commit-build.sh
         language: script
         pass_filenames: false
-        files: ^(src/|CMakeLists\.txt|\.clang-format)
+        files: ^(src/|tests/|CMakeLists\.txt|\.clang-format)
