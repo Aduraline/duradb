@@ -20,6 +20,27 @@ cmake --build build
 ./build/duradb
 ```
 
+## Development
+
+Install [pre-commit](https://pre-commit.com/) once, then enable git hooks:
+
+```bash
+brew install pre-commit   # or: pip install pre-commit
+pre-commit install
+```
+
+On each commit, hooks will:
+
+- fix trailing whitespace and missing end-of-file newlines
+- run `clang-format` on C++ sources
+- verify the project builds with CMake
+
+Run hooks manually against all files:
+
+```bash
+pre-commit run --all-files
+```
+
 ## Project layout
 
 ```
