@@ -86,21 +86,21 @@ void Repl::process_line(const std::string &line, std::ostream &output) {
     }
 
     Parser parser(line);
-    const ParseResult<Statement> parsed = parser.parse_statement();
+    ParseResult<Statement> parsed = parser.parse_statement();
     if (!parsed.has_value()) {
         print_parse_error(parsed.error(), output);
         return;
     }
 
     Binder binder(engine_);
-    const Result<BoundStatement> bound = binder.bind(std::move(parsed.value()));
+    Result<BoundStatement> bound = binder.bind(std::move(parsed.value()));
     if (!bound.has_value()) {
         print_error(bound.error().message, output);
         return;
     }
 
     Executor executor(engine_);
-    const Result<ExecutionResult> result = executor.execute(std::move(bound.value()));
+    Result<ExecutionResult> result = executor.execute(std::move(bound.value()));
     if (!result.has_value()) {
         print_error(result.error().message, output);
         return;
