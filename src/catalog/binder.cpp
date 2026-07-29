@@ -43,10 +43,6 @@ Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) con
         return Result<BoundStatement>::fail(Error{"table not found"});
     }
 
-    if (statement.values.size() != table->columns.size()) {
-        return Result<BoundStatement>::fail(Error{"insert column count mismatch"});
-    }
-
     BoundInsertStatement bound_insert;
     bound_insert.table = table;
     bound_insert.values.reserve(statement.values.size());
