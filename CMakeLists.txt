@@ -97,6 +97,24 @@ target_compile_options(evaluate_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(evaluate_test)
 
+add_executable(executor_test
+    tests/executor_test.cpp
+)
+target_include_directories(executor_test PRIVATE tests)
+target_link_libraries(executor_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(executor_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(executor_test)
+
+add_executable(integration_test
+    tests/integration_test.cpp
+)
+target_include_directories(integration_test PRIVATE tests)
+target_link_libraries(integration_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(integration_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(integration_test)
+
 add_executable(repl_test
     tests/repl_test.cpp
     src/repl/repl.cpp
