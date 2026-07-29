@@ -4,18 +4,21 @@
 
 #include <cstdint>
 #include <string>
+#include <variant>
 
 namespace duradb {
 
 struct Value {
     LogicalType type;
-    std::int64_t int_value{};
-    std::string text_value;
+    std::variant<std::int64_t, std::string> payload;
 
     static Value from_int(std::int64_t value);
     static Value from_text(std::string value);
 
     static Value from_expression(const Expression &expression);
+
+    std::int64_t as_int() const;
+    const std::string &as_text() const;
 };
 
 } // namespace duradb

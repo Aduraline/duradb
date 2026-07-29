@@ -29,11 +29,11 @@ std::string decode_string_literal(std::string_view lexeme) {
 } // namespace
 
 Value Value::from_int(std::int64_t value) {
-    return Value{LogicalType::Int, value, {}};
+    return Value{LogicalType::Int, value};
 }
 
 Value Value::from_text(std::string value) {
-    return Value{LogicalType::Text, 0, std::move(value)};
+    return Value{LogicalType::Text, std::move(value)};
 }
 
 Value Value::from_expression(const Expression &expression) {
@@ -46,6 +46,14 @@ Value Value::from_expression(const Expression &expression) {
     }
 
     return from_text("");
+}
+
+std::int64_t Value::as_int() const {
+    return std::get<std::int64_t>(payload);
+}
+
+const std::string &Value::as_text() const {
+    return std::get<std::string>(payload);
 }
 
 } // namespace duradb

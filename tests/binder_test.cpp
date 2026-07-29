@@ -26,8 +26,8 @@ TEST(BinderTest, BindsCreateInsertAndSelect) {
     ASSERT_TRUE(insert.has_value());
     EXPECT_EQ(insert.value().kind, BoundStatement::Kind::Insert);
     ASSERT_EQ(insert.value().insert.values.size(), 2U);
-    EXPECT_EQ(insert.value().insert.values[0].int_value, 1);
-    EXPECT_EQ(insert.value().insert.values[1].text_value, "Alice");
+    EXPECT_EQ(insert.value().insert.values[0].as_int(), 1);
+    EXPECT_EQ(insert.value().insert.values[1].as_text(), "Alice");
 
     const auto select = bind_sql(catalog, "SELECT name FROM users WHERE id > 0;");
     ASSERT_TRUE(select.has_value());

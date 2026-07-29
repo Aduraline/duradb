@@ -40,8 +40,8 @@ TEST(HeapTableTest, InsertsAndScansRows) {
     const auto rows = storage.scan("users");
     ASSERT_TRUE(rows.has_value());
     ASSERT_EQ(rows.value().size(), 2U);
-    EXPECT_EQ(rows.value()[0].values[0].int_value, 1);
-    EXPECT_EQ(rows.value()[1].values[1].text_value, "Bob");
+    EXPECT_EQ(rows.value()[0].values[0].as_int(), 1);
+    EXPECT_EQ(rows.value()[1].values[1].as_text(), "Bob");
 }
 
 TEST(HeapTableTest, RejectsInsertIntoMissingTable) {
