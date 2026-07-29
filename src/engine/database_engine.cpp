@@ -122,7 +122,7 @@ Status DatabaseEngine::insert(std::string_view table_name, Row row) {
     return Status::ok(Unit{});
 }
 
-Status DatabaseEngine::insert_batch(std::string_view table_name, std::span<const Row> rows) {
+Status DatabaseEngine::insert_batch(std::string_view table_name, std::span<Row> rows) {
     TableStorage *storage = find_storage(table_name);
     if (storage == nullptr) {
         return Status::fail(Error{"table not found"});
@@ -139,10 +139,11 @@ Status DatabaseEngine::insert_batch(std::string_view table_name, std::span<const
 #endif
 
     storage->rows.reserve(storage->rows.size() + rows.size());
-    for (const Row &row : rows) {
-        storage->rows.push_back(row);
+    for (Row &row : rows) {
+        storage->rows.push_back(std::move(row));
     }
 
+    // TODO: columnar append buffer for write-heavy ingest
     return Status::ok(Unit{});
 }
 

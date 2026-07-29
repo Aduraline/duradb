@@ -47,7 +47,7 @@ TEST(StorageTest, InsertsBatch) {
     DatabaseEngine engine;
     ASSERT_TRUE(engine.create_table(users_schema()).has_value());
 
-    const Row rows[] = {
+    Row rows[] = {
         Row{{Value::from_int(1), Value::from_text("Ada")}},
         Row{{Value::from_int(2), Value::from_text("Bob")}},
     };

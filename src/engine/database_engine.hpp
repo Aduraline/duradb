@@ -25,7 +25,7 @@ class DatabaseEngine {
     Status validate_insert(std::string_view table_name, const std::vector<Value> &values) const;
 
     Status insert(std::string_view table_name, Row row);
-    Status insert_batch(std::string_view table_name, std::span<const Row> rows);
+    Status insert_batch(std::string_view table_name, std::span<Row> rows);
 
     template <typename RowFn>
     Status for_each_row(std::string_view table_name, RowFn &&row_fn) const {
