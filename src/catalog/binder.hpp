@@ -9,6 +9,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace duradb {
@@ -18,12 +19,12 @@ struct BoundCreateTableStatement {
 };
 
 struct BoundInsertStatement {
-    const TableSchema *table;
+    std::string table_name;
     std::vector<Value> values;
 };
 
 struct BoundSelectStatement {
-    const TableSchema *table;
+    std::string table_name;
     bool select_all;
     std::vector<std::size_t> column_ordinals;
     std::unique_ptr<BoundExpression> where;

@@ -7,6 +7,14 @@
 
 namespace duradb {
 
+namespace {
+
+const TableSchema *resolve_table(const DatabaseEngine &engine, std::string_view table_name) {
+    return engine.find_table(table_name);
+}
+
+} // namespace
+
 Executor::Executor(DatabaseEngine &engine) : engine_(engine) {}
 
 Result<ExecutionResult> Executor::execute(BoundStatement bound) {
@@ -33,8 +41,12 @@ Result<ExecutionResult> Executor::execute_create(BoundCreateTableStatement bound
 }
 
 Result<ExecutionResult> Executor::execute_insert(BoundInsertStatement bound) {
+    if (resolve_table(engine_, bound.table_name) == nullptr) {
+        return Result<ExecutionResult>::fail(Error{"table not found"});
+    }
+
     if (const Status status =
-            engine_.insert(bound.table->name, Row{std::move(bound.values)}); !status.has_value()) {
+            engine_.insert(bound.table_name, Row{std::move(bound.values)}); !status.has_value()) {
         return Result<ExecutionResult>::fail(status.error());
     }
 
@@ -44,7 +56,12 @@ Result<ExecutionResult> Executor::execute_insert(BoundInsertStatement bound) {
 }
 
 Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
-    const std::size_t column_count = bound.table->columns.size();
+    const TableSchema *table = resolve_table(engine_, bound.table_name);
+    if (table == nullptr) {
+        return Result<ExecutionResult>::fail(Error{"table not found"});
+    }
+
+    const std::size_t column_count = table->columns.size();
 
     for (const std::size_t ordinal : bound.column_ordinals) {
         if (ordinal >= column_count) {
@@ -69,12 +86,12 @@ Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
     result.column_names.reserve(bound.column_ordinals.size());
 
     for (const std::size_t ordinal : bound.column_ordinals) {
-        result.column_names.push_back(bound.table->columns[ordinal].name);
+        result.column_names.push_back(table->columns[ordinal].name);
     }
 
     std::optional<Error> evaluation_error;
 
-    const Status scan_status = engine_.for_each_row(bound.table->name, [&](const Row &row) {
+    const Status scan_status = engine_.for_each_row(bound.table_name, [&](const Row &row) {
         if (evaluation_error.has_value()) {
             return;
         }
