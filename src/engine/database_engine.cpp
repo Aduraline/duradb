@@ -1,6 +1,7 @@
 #include "engine/database_engine.hpp"
 
 #include "common/string_view_hash.hpp"
+#include "storage/row.hpp"
 
 #include <cstdlib>
 
@@ -18,10 +19,6 @@ bool has_duplicate_columns(const TableSchema &schema) {
     }
 
     return false;
-}
-
-bool types_match(LogicalType expected, LogicalType actual) {
-    return expected == actual;
 }
 
 #ifndef NDEBUG
@@ -95,17 +92,7 @@ Status DatabaseEngine::validate_insert(std::string_view table_name,
         return Status::fail(Error{"table not found"});
     }
 
-    if (values.size() != table->columns.size()) {
-        return Status::fail(Error{"insert column count mismatch"});
-    }
-
-    for (std::size_t index = 0; index < values.size(); ++index) {
-        if (!types_match(table->columns[index].type, values[index].type)) {
-            return Status::fail(Error{"insert type mismatch"});
-        }
-    }
-
-    return Status::ok(Unit{});
+    return validate_values(values, *table);
 }
 
 Status DatabaseEngine::insert(std::string_view table_name, Row row) {

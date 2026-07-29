@@ -27,6 +27,19 @@ TEST(RowTest, RejectsColumnCountMismatch) {
     EXPECT_FALSE(validate_row(row, schema).has_value());
 }
 
+TEST(RowTest, RejectsPayloadMismatch) {
+    TableSchema schema;
+    schema.name = "users";
+    schema.columns = {{"id", LogicalType::Int, 0}};
+
+    duradb::Value value;
+    value.type = LogicalType::Int;
+    value.payload = std::string("not-an-int");
+
+    Row row{{value}};
+    EXPECT_FALSE(validate_row(row, schema).has_value());
+}
+
 TEST(RowTest, RejectsTypeMismatch) {
     TableSchema schema;
     schema.name = "users";

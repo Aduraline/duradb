@@ -12,6 +12,7 @@ struct Row {
     std::vector<Value> values; // TODO: fixed-width/columnar layout for read path
 };
 
+Status validate_values(const std::vector<Value> &values, const TableSchema &schema);
 Status validate_row(const Row &row, const TableSchema &schema);
 
 } // namespace duradb
