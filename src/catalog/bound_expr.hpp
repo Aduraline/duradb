@@ -4,6 +4,7 @@
 #include "catalog/value.hpp"
 #include "common/result.hpp"
 #include "frontend/ast.hpp"
+#include "storage/row.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -40,5 +41,7 @@ struct BoundExpression {
 
 Result<std::unique_ptr<BoundExpression>> bind_expression(const Expression &expression,
                                                          const TableSchema &schema);
+
+bool evaluate(const BoundExpression &expression, const Row &row);
 
 } // namespace duradb

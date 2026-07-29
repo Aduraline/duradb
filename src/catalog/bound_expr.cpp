@@ -145,11 +145,73 @@ Result<std::unique_ptr<BoundExpression>> bind_expression_impl(const Expression &
     return Result<std::unique_ptr<BoundExpression>>::ok(std::move(bound));
 }
 
+Value evaluate_value(const BoundExpression &expression, const Row &row) {
+    switch (expression.kind) {
+    case BoundExpressionKind::Literal:
+        return expression.literal;
+    case BoundExpressionKind::ColumnRef:
+        return row.values[expression.column_ordinal];
+    case BoundExpressionKind::Comparison:
+    case BoundExpressionKind::And:
+    case BoundExpressionKind::Or:
+        break;
+    }
+
+    return Value::from_int(0);
+}
+
+bool compare_values(BoundComparisonOperator op, const Value &left, const Value &right) {
+    if (left.type != right.type) {
+        return false;
+    }
+
+    switch (op) {
+    case BoundComparisonOperator::Equal:
+        if (left.type == LogicalType::Int) {
+            return left.as_int() == right.as_int();
+        }
+        return left.as_text() == right.as_text();
+    case BoundComparisonOperator::NotEqual:
+        if (left.type == LogicalType::Int) {
+            return left.as_int() != right.as_int();
+        }
+        return left.as_text() != right.as_text();
+    case BoundComparisonOperator::Less:
+        return left.as_int() < right.as_int();
+    case BoundComparisonOperator::LessEqual:
+        return left.as_int() <= right.as_int();
+    case BoundComparisonOperator::Greater:
+        return left.as_int() > right.as_int();
+    case BoundComparisonOperator::GreaterEqual:
+        return left.as_int() >= right.as_int();
+    }
+
+    return false;
+}
+
 } // namespace
 
 Result<std::unique_ptr<BoundExpression>> bind_expression(const Expression &expression,
                                                          const TableSchema &schema) {
     return bind_expression_impl(expression, schema);
+}
+
+bool evaluate(const BoundExpression &expression, const Row &row) {
+    switch (expression.kind) {
+    case BoundExpressionKind::Comparison:
+        return compare_values(expression.comparison_op,
+                              evaluate_value(*expression.left, row),
+                              evaluate_value(*expression.right, row));
+    case BoundExpressionKind::And:
+        return evaluate(*expression.left, row) && evaluate(*expression.right, row);
+    case BoundExpressionKind::Or:
+        return evaluate(*expression.left, row) || evaluate(*expression.right, row);
+    case BoundExpressionKind::Literal:
+    case BoundExpressionKind::ColumnRef:
+        break;
+    }
+
+    return false;
 }
 
 } // namespace duradb

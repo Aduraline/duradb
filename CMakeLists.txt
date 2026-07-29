@@ -88,6 +88,14 @@ target_compile_options(bound_expr_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(bound_expr_test)
 
+add_executable(evaluate_test
+    tests/evaluate_test.cpp
+)
+target_link_libraries(evaluate_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(evaluate_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(evaluate_test)
+
 add_executable(repl_test
     tests/repl_test.cpp
     src/repl/repl.cpp
