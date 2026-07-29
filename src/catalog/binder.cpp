@@ -56,7 +56,12 @@ Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) con
             return Result<BoundStatement>::fail(Error{"expected literal value in insert"});
         }
 
-        bound_insert.values.push_back(Value::from_expression(*value_expression));
+        Result<Value> literal = Value::from_expression(*value_expression);
+        if (!literal.has_value()) {
+            return Result<BoundStatement>::fail(literal.error());
+        }
+
+        bound_insert.values.push_back(std::move(literal.value()));
     }
 
     if (const Status validation = engine_.validate_insert(statement.table, bound_insert.values);

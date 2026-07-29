@@ -106,6 +106,14 @@ target_compile_options(row_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(row_test)
 
+add_executable(value_test
+    tests/value_test.cpp
+)
+target_link_libraries(value_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(value_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(value_test)
+
 add_executable(storage_test
     tests/storage_test.cpp
 )

@@ -71,10 +71,15 @@ Result<std::unique_ptr<BoundExpression>> bind_expression_impl(const Expression &
         return Result<std::unique_ptr<BoundExpression>>::ok(std::move(bound));
     }
 
-    if (const auto *string = dynamic_cast<const StringLiteralExpression *>(&expression)) {
+    if (dynamic_cast<const StringLiteralExpression *>(&expression) != nullptr) {
+        Result<Value> literal = Value::from_expression(expression);
+        if (!literal.has_value()) {
+            return Result<std::unique_ptr<BoundExpression>>::fail(literal.error());
+        }
+
         auto bound = std::make_unique<BoundExpression>();
         bound->kind = BoundExpressionKind::Literal;
-        bound->literal = Value::from_expression(expression);
+        bound->literal = std::move(literal.value());
         return Result<std::unique_ptr<BoundExpression>>::ok(std::move(bound));
     }
 
