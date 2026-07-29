@@ -44,7 +44,7 @@ Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) con
     }
 
     BoundInsertStatement bound_insert;
-    bound_insert.table = table;
+    bound_insert.table_name = std::string(statement.table);
     bound_insert.values.reserve(statement.values.size());
 
     for (const std::unique_ptr<Expression> &value_expression : statement.values) {
@@ -78,7 +78,7 @@ Result<BoundStatement> Binder::bind_select(SelectStatement statement) const {
     }
 
     BoundSelectStatement bound_select;
-    bound_select.table = table;
+    bound_select.table_name = std::string(statement.table);
     bound_select.select_all = statement.select_all;
 
     if (statement.where != nullptr) {
@@ -86,6 +86,11 @@ Result<BoundStatement> Binder::bind_select(SelectStatement statement) const {
             bind_expression(*statement.where, *table);
         if (!bound_where.has_value()) {
             return Result<BoundStatement>::fail(bound_where.error());
+        }
+
+        if (const Status validation = validate_bound_predicate(*bound_where.value());
+            !validation.has_value()) {
+            return Result<BoundStatement>::fail(validation.error());
         }
 
         bound_select.where = std::move(bound_where.value());

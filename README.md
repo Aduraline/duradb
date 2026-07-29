@@ -25,10 +25,20 @@ Interactive shell:
 Example:
 
 ```text
+DuraDB interactive shell. Type .help for commands.
 duradb> CREATE TABLE users (id INT, name TEXT);
-parsed successfully
+OK
+duradb> INSERT INTO users VALUES (1, 'Adura');
+OK
+duradb> INSERT INTO users VALUES (2, 'Abraham');
+OK
+duradb> SELECT name FROM users WHERE id > 1;
+Adura
+Abraham
 duradb> SELECT * FROM users;
-parsed successfully
+id	name
+1	Adura
+2	Abraham
 duradb> .quit
 ```
 

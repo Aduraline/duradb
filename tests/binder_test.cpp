@@ -26,6 +26,7 @@ TEST(BinderTest, BindsCreateInsertAndSelect) {
     const auto insert = bind_sql(engine, "INSERT INTO users VALUES (1, 'Alice');");
     ASSERT_TRUE(insert.has_value());
     EXPECT_EQ(insert.value().kind, BoundStatement::Kind::Insert);
+    EXPECT_EQ(insert.value().insert.table_name, "users");
     ASSERT_EQ(insert.value().insert.values.size(), 2U);
     EXPECT_EQ(insert.value().insert.values[0].as_int(), 1);
     EXPECT_EQ(insert.value().insert.values[1].as_text(), "Alice");
@@ -33,6 +34,7 @@ TEST(BinderTest, BindsCreateInsertAndSelect) {
     const auto select = bind_sql(engine, "SELECT name FROM users WHERE id > 0;");
     ASSERT_TRUE(select.has_value());
     EXPECT_EQ(select.value().kind, BoundStatement::Kind::Select);
+    EXPECT_EQ(select.value().select.table_name, "users");
     ASSERT_EQ(select.value().select.column_ordinals.size(), 1U);
     EXPECT_EQ(select.value().select.column_ordinals.front(), 1U);
     ASSERT_NE(select.value().select.where, nullptr);
@@ -62,4 +64,24 @@ TEST(BinderTest, RejectsInvalidComparisonTypes) {
     register_bound_create(engine, create.value());
 
     EXPECT_FALSE(bind_sql(engine, "SELECT name FROM users WHERE name > 0;").has_value());
+}
+
+TEST(BinderTest, RejectsLiteralWhereClause) {
+    DatabaseEngine engine;
+
+    const auto create = bind_sql(engine, "CREATE TABLE users (id INT);");
+    ASSERT_TRUE(create.has_value());
+    register_bound_create(engine, create.value());
+
+    EXPECT_FALSE(bind_sql(engine, "SELECT id FROM users WHERE 1;").has_value());
+}
+
+TEST(BinderTest, RejectsBareColumnWhereClause) {
+    DatabaseEngine engine;
+
+    const auto create = bind_sql(engine, "CREATE TABLE users (id INT);");
+    ASSERT_TRUE(create.has_value());
+    register_bound_create(engine, create.value());
+
+    EXPECT_FALSE(bind_sql(engine, "SELECT id FROM users WHERE id;").has_value());
 }

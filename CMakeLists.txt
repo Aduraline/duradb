@@ -18,6 +18,7 @@ add_library(duradb_engine STATIC
     src/catalog/bound_expr.cpp
     src/catalog/binder.cpp
     src/engine/database_engine.cpp
+    src/execution/executor.cpp
     src/storage/row.cpp
 )
 target_include_directories(duradb_engine PUBLIC src)
@@ -87,6 +88,32 @@ target_link_libraries(bound_expr_test PRIVATE duradb_engine GTest::gtest_main)
 target_compile_options(bound_expr_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(bound_expr_test)
+
+add_executable(evaluate_test
+    tests/evaluate_test.cpp
+)
+target_link_libraries(evaluate_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(evaluate_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(evaluate_test)
+
+add_executable(executor_test
+    tests/executor_test.cpp
+)
+target_include_directories(executor_test PRIVATE tests)
+target_link_libraries(executor_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(executor_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(executor_test)
+
+add_executable(integration_test
+    tests/integration_test.cpp
+)
+target_include_directories(integration_test PRIVATE tests)
+target_link_libraries(integration_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(integration_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(integration_test)
 
 add_executable(repl_test
     tests/repl_test.cpp
