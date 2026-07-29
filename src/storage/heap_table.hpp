@@ -24,10 +24,10 @@ class HeapTable {
   private:
     struct TableStorage {
         TableSchema schema;
-        std::vector<Row> rows;
+        std::vector<Row> rows; // TODO: slotted pages via buffer pool
     };
 
-    std::unordered_map<std::string, TableStorage> tables_; // TODO: page-based heap file
+    std::unordered_map<std::string, TableStorage> tables_; // TODO: durable heap file on disk
 };
 
 } // namespace duradb

@@ -28,6 +28,7 @@ Status HeapTable::insert(std::string_view table_name, Row row) {
     }
 
     iterator->second.rows.push_back(std::move(row));
+    // TODO: batch append path for write-heavy workloads
     return Status::ok(Unit{});
 }
 
@@ -37,6 +38,8 @@ Result<std::vector<Row>> HeapTable::scan(std::string_view table_name) const {
         return Result<std::vector<Row>>::fail(Error{"table not found"});
     }
 
+    // TODO: row iterator; avoid copying full table on scan
+    // TODO: index scan when indexes land
     return Result<std::vector<Row>>::ok(iterator->second.rows);
 }
 
