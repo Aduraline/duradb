@@ -22,6 +22,14 @@ target_include_directories(duradb_catalog PUBLIC src)
 target_link_libraries(duradb_catalog PUBLIC duradb_frontend)
 target_compile_options(duradb_catalog PRIVATE -Wall -Wextra -Wpedantic)
 
+add_library(duradb_storage STATIC
+    src/storage/row.cpp
+    src/storage/heap_table.cpp
+)
+target_include_directories(duradb_storage PUBLIC src)
+target_link_libraries(duradb_storage PUBLIC duradb_catalog)
+target_compile_options(duradb_storage PRIVATE -Wall -Wextra -Wpedantic)
+
 add_executable(duradb
     src/main.cpp
     src/repl/repl.cpp
@@ -86,3 +94,20 @@ target_link_libraries(repl_test PRIVATE duradb_catalog GTest::gtest_main)
 target_compile_options(repl_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(repl_test)
+
+add_executable(row_test
+    tests/row_test.cpp
+    src/storage/row.cpp
+)
+target_link_libraries(row_test PRIVATE duradb_storage GTest::gtest_main)
+target_compile_options(row_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(row_test)
+
+add_executable(heap_table_test
+    tests/heap_table_test.cpp
+)
+target_link_libraries(heap_table_test PRIVATE duradb_storage GTest::gtest_main)
+target_compile_options(heap_table_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(heap_table_test)

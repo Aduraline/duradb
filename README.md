@@ -68,6 +68,7 @@ duradb/
 │   ├── main.cpp
 │   ├── frontend/       # SQL frontend (lexer, parser, ast)
 │   ├── catalog/        # schema registry and binder
+│   ├── storage/        # in-memory row storage
 │   └── common/         # shared result types
 └── tests/              # unit tests (GoogleTest)
 ```
