@@ -18,6 +18,7 @@ add_library(duradb_engine STATIC
     src/catalog/bound_expr.cpp
     src/catalog/binder.cpp
     src/engine/database_engine.cpp
+    src/execution/executor.cpp
     src/storage/row.cpp
 )
 target_include_directories(duradb_engine PUBLIC src)
