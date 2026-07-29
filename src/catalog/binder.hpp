@@ -1,9 +1,10 @@
 #pragma once
 
-#include "catalog/catalog.hpp"
+#include "catalog/bound_expr.hpp"
 #include "catalog/schema.hpp"
 #include "catalog/value.hpp"
 #include "common/result.hpp"
+#include "engine/database_engine.hpp"
 #include "frontend/ast.hpp"
 
 #include <cstddef>
@@ -25,7 +26,7 @@ struct BoundSelectStatement {
     const TableSchema *table;
     bool select_all;
     std::vector<std::size_t> column_ordinals;
-    std::unique_ptr<Expression> where; // TODO: typed bound expression for executor
+    std::unique_ptr<BoundExpression> where;
 };
 
 struct BoundStatement {
@@ -38,12 +39,12 @@ struct BoundStatement {
 
 class Binder {
   public:
-    explicit Binder(const Catalog &catalog);
+    explicit Binder(const DatabaseEngine &engine);
 
     Result<BoundStatement> bind(Statement statement) const;
 
   private:
-    const Catalog &catalog_;
+    const DatabaseEngine &engine_;
 
     Result<BoundStatement> bind_create_table(const CreateTableStatement &statement) const;
     Result<BoundStatement> bind_insert(const InsertStatement &statement) const;
