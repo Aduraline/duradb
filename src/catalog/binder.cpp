@@ -88,6 +88,11 @@ Result<BoundStatement> Binder::bind_select(SelectStatement statement) const {
             return Result<BoundStatement>::fail(bound_where.error());
         }
 
+        if (const Status validation = validate_bound_predicate(*bound_where.value());
+            !validation.has_value()) {
+            return Result<BoundStatement>::fail(validation.error());
+        }
+
         bound_select.where = std::move(bound_where.value());
     }
 

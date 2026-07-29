@@ -174,6 +174,54 @@ Status validate_bound_expression_ordinals_impl(const BoundExpression &expression
     return Status::ok(Unit{});
 }
 
+Status validate_bound_predicate_operand(const BoundExpression &expression) {
+    if (expression.kind == BoundExpressionKind::Literal ||
+        expression.kind == BoundExpressionKind::ColumnRef) {
+        return Status::ok(Unit{});
+    }
+
+    return Status::fail(Error{"expected literal or column reference in comparison"});
+}
+
+Status validate_bound_predicate_impl(const BoundExpression &expression) {
+    switch (expression.kind) {
+    case BoundExpressionKind::Comparison: {
+        if (expression.left == nullptr || expression.right == nullptr) {
+            return Status::fail(Error{"comparison is missing operands"});
+        }
+
+        if (const Status left = validate_bound_predicate_operand(*expression.left);
+            !left.has_value()) {
+            return left;
+        }
+
+        if (const Status right = validate_bound_predicate_operand(*expression.right);
+            !right.has_value()) {
+            return right;
+        }
+
+        return Status::ok(Unit{});
+    }
+    case BoundExpressionKind::And:
+    case BoundExpressionKind::Or: {
+        if (expression.left == nullptr || expression.right == nullptr) {
+            return Status::fail(Error{"logical expression is missing operands"});
+        }
+
+        if (const Status left = validate_bound_predicate_impl(*expression.left); !left.has_value()) {
+            return left;
+        }
+
+        return validate_bound_predicate_impl(*expression.right);
+    }
+    case BoundExpressionKind::Literal:
+    case BoundExpressionKind::ColumnRef:
+        return Status::fail(Error{"where clause must be a predicate expression"});
+    }
+
+    return Status::fail(Error{"unsupported predicate expression"});
+}
+
 Result<Value> evaluate_value(const BoundExpression &expression, const Row &row) {
     switch (expression.kind) {
     case BoundExpressionKind::Literal:
@@ -234,6 +282,10 @@ Status validate_bound_expression_ordinals(const BoundExpression &expression,
     return validate_bound_expression_ordinals_impl(expression, column_count);
 }
 
+Status validate_bound_predicate(const BoundExpression &expression) {
+    return validate_bound_predicate_impl(expression);
+}
+
 Result<bool> evaluate(const BoundExpression &expression, const Row &row) {
     switch (expression.kind) {
     case BoundExpressionKind::Comparison: {
@@ -276,7 +328,7 @@ Result<bool> evaluate(const BoundExpression &expression, const Row &row) {
     }
     case BoundExpressionKind::Literal:
     case BoundExpressionKind::ColumnRef:
-        break;
+        return Result<bool>::fail(Error{"where clause must be a predicate expression"});
     }
 
     return Result<bool>::fail(Error{"unsupported predicate expression"});

@@ -53,6 +53,10 @@ Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
     }
 
     if (bound.where != nullptr) {
+        if (const Status validation = validate_bound_predicate(*bound.where); !validation.has_value()) {
+            return Result<ExecutionResult>::fail(validation.error());
+        }
+
         if (const Status validation =
                 validate_bound_expression_ordinals(*bound.where, column_count);
             !validation.has_value()) {

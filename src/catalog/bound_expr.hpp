@@ -45,6 +45,8 @@ Result<std::unique_ptr<BoundExpression>> bind_expression(const Expression &expre
 Status validate_bound_expression_ordinals(const BoundExpression &expression,
                                           std::size_t column_count);
 
+Status validate_bound_predicate(const BoundExpression &expression);
+
 Result<bool> evaluate(const BoundExpression &expression, const Row &row);
 
 } // namespace duradb

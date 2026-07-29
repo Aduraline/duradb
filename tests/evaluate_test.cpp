@@ -98,3 +98,21 @@ TEST(EvaluateTest, ValidatesExpressionOrdinalsAgainstSchema) {
 
     EXPECT_FALSE(validate_bound_expression_ordinals(predicate, 2).has_value());
 }
+
+TEST(EvaluateTest, RejectsLiteralRootPredicate) {
+    Row row{{Value::from_int(1), Value::from_text("Ada")}};
+
+    EXPECT_FALSE(evaluate(make_int_literal(1), row).has_value());
+}
+
+TEST(EvaluateTest, RejectsColumnRefRootPredicate) {
+    Row row{{Value::from_int(1), Value::from_text("Ada")}};
+
+    EXPECT_FALSE(evaluate(make_column_ref(0, LogicalType::Int), row).has_value());
+}
+
+TEST(EvaluateTest, RejectsMalformedPredicateShape) {
+    BoundExpression predicate = make_int_literal(1);
+
+    EXPECT_FALSE(validate_bound_predicate(predicate).has_value());
+}

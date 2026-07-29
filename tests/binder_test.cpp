@@ -63,3 +63,23 @@ TEST(BinderTest, RejectsInvalidComparisonTypes) {
 
     EXPECT_FALSE(bind_sql(engine, "SELECT name FROM users WHERE name > 0;").has_value());
 }
+
+TEST(BinderTest, RejectsLiteralWhereClause) {
+    DatabaseEngine engine;
+
+    const auto create = bind_sql(engine, "CREATE TABLE users (id INT);");
+    ASSERT_TRUE(create.has_value());
+    register_bound_create(engine, create.value());
+
+    EXPECT_FALSE(bind_sql(engine, "SELECT id FROM users WHERE 1;").has_value());
+}
+
+TEST(BinderTest, RejectsBareColumnWhereClause) {
+    DatabaseEngine engine;
+
+    const auto create = bind_sql(engine, "CREATE TABLE users (id INT);");
+    ASSERT_TRUE(create.has_value());
+    register_bound_create(engine, create.value());
+
+    EXPECT_FALSE(bind_sql(engine, "SELECT id FROM users WHERE id;").has_value());
+}
