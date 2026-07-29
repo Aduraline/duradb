@@ -24,6 +24,7 @@ target_compile_options(duradb_catalog PRIVATE -Wall -Wextra -Wpedantic)
 
 add_executable(duradb
     src/main.cpp
+    src/repl/repl.cpp
 )
 target_link_libraries(duradb PRIVATE duradb_catalog)
 target_compile_options(duradb PRIVATE -Wall -Wextra -Wpedantic)
@@ -75,3 +76,13 @@ target_link_libraries(binder_test PRIVATE duradb_catalog GTest::gtest_main)
 target_compile_options(binder_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(binder_test)
+
+add_executable(repl_test
+    tests/repl_test.cpp
+    src/repl/repl.cpp
+)
+target_include_directories(repl_test PRIVATE tests)
+target_link_libraries(repl_test PRIVATE duradb_catalog GTest::gtest_main)
+target_compile_options(repl_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(repl_test)

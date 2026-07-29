@@ -16,8 +16,20 @@ cmake --build build
 
 ## Run
 
+Interactive shell:
+
 ```bash
 ./build/duradb
+```
+
+Example:
+
+```text
+duradb> CREATE TABLE users (id INT, name TEXT);
+parsed successfully
+duradb> SELECT * FROM users;
+parsed successfully
+duradb> .quit
 ```
 
 ## Test

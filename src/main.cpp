@@ -1,6 +1,8 @@
+#include "repl/repl.hpp"
+
 #include <iostream>
 
 int main() {
-    std::cout << "DuraDB\n";
-    return 0;
+    duradb::Repl repl;
+    return repl.run(std::cin, std::cout);
 }
