@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine/database_engine.hpp"
+
 #include <iosfwd>
 #include <string>
 
@@ -10,6 +12,9 @@ class Repl {
     int run(std::istream &input, std::ostream &output);
 
     void process_line(const std::string &line, std::ostream &output);
+
+  private:
+    DatabaseEngine engine_;
 };
 
 } // namespace duradb

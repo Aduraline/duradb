@@ -1,5 +1,7 @@
 #include "repl/repl.hpp"
 
+#include "catalog/binder.hpp"
+#include "execution/executor.hpp"
 #include "frontend/parser.hpp"
 
 #include <iostream>
@@ -33,6 +35,44 @@ void print_parse_error(const ParseError &error, std::ostream &output) {
            << '\n';
 }
 
+void print_error(std::string_view message, std::ostream &output) {
+    output << "error: " << message << '\n';
+}
+
+void print_value(const Value &value, std::ostream &output) {
+    if (value.type == LogicalType::Int) {
+        output << value.as_int();
+        return;
+    }
+
+    output << value.as_text();
+}
+
+void print_execution_result(const ExecutionResult &result, std::ostream &output) {
+    if (result.kind == ExecutionResult::Kind::Ok) {
+        output << "OK\n";
+        return;
+    }
+
+    for (std::size_t index = 0; index < result.column_names.size(); ++index) {
+        if (index > 0) {
+            output << '\t';
+        }
+        output << result.column_names[index];
+    }
+    output << '\n';
+
+    for (const std::vector<Value> &row : result.rows) {
+        for (std::size_t index = 0; index < row.size(); ++index) {
+            if (index > 0) {
+                output << '\t';
+            }
+            print_value(row[index], output);
+        }
+        output << '\n';
+    }
+}
+
 } // namespace
 
 void Repl::process_line(const std::string &line, std::ostream &output) {
@@ -52,10 +92,21 @@ void Repl::process_line(const std::string &line, std::ostream &output) {
         return;
     }
 
-    // TODO: bind -> executor
-    // TODO: print result sets for SELECT
+    Binder binder(engine_);
+    const Result<BoundStatement> bound = binder.bind(std::move(parsed.value()));
+    if (!bound.has_value()) {
+        print_error(bound.error().message, output);
+        return;
+    }
 
-    output << "parsed successfully\n";
+    Executor executor(engine_);
+    const Result<ExecutionResult> result = executor.execute(std::move(bound.value()));
+    if (!result.has_value()) {
+        print_error(result.error().message, output);
+        return;
+    }
+
+    print_execution_result(result.value(), output);
 }
 
 int Repl::run(std::istream &input, std::ostream &output) {
