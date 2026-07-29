@@ -95,7 +95,7 @@ TEST(StorageTest, RejectsInsertIntoMissingTable) {
     EXPECT_FALSE(engine.insert("users", Row{{Value::from_int(1)}}).has_value());
 }
 
-TEST(StorageTest, LookupDoesNotAllocateOnHotPath) {
+TEST(StorageTest, RepeatedLookupUsesStringViewFind) {
     DatabaseEngine engine;
     ASSERT_TRUE(engine.create_table(users_schema()).has_value());
 
