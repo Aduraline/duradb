@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(duradb_frontend STATIC
     src/frontend/lexer.cpp
+    src/frontend/parser.cpp
 )
 target_include_directories(duradb_frontend PUBLIC src)
 target_compile_options(duradb_frontend PRIVATE -Wall -Wextra -Wpedantic)
@@ -37,3 +38,12 @@ target_compile_options(lexer_test PRIVATE -Wall -Wextra -Wpedantic)
 
 include(GoogleTest)
 gtest_discover_tests(lexer_test)
+
+add_executable(parser_test
+    tests/parser_test.cpp
+)
+target_include_directories(parser_test PRIVATE tests)
+target_link_libraries(parser_test PRIVATE duradb_frontend GTest::gtest_main)
+target_compile_options(parser_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(parser_test)
