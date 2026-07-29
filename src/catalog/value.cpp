@@ -1,5 +1,8 @@
 #include "catalog/value.hpp"
 
+#include <cassert>
+#include <utility>
+
 namespace duradb {
 
 namespace {
@@ -26,26 +29,50 @@ std::string decode_string_literal(std::string_view lexeme) {
     return decoded;
 }
 
+bool payload_matches_type(LogicalType type,
+                           const std::variant<std::int64_t, std::string> &payload) {
+    switch (type) {
+    case LogicalType::Int:
+        return std::holds_alternative<std::int64_t>(payload);
+    case LogicalType::Text:
+        return std::holds_alternative<std::string>(payload);
+    }
+
+    return false;
+}
+
 } // namespace
 
 Value Value::from_int(std::int64_t value) {
-    return Value{LogicalType::Int, value, {}};
+    return Value{LogicalType::Int, value};
 }
 
 Value Value::from_text(std::string value) {
-    return Value{LogicalType::Text, 0, std::move(value)};
+    return Value{LogicalType::Text, std::move(value)};
 }
 
-Value Value::from_expression(const Expression &expression) {
+Result<Value> Value::from_expression(const Expression &expression) {
     if (const auto *integer = dynamic_cast<const IntegerLiteralExpression *>(&expression)) {
-        return from_int(integer->value);
+        return Result<Value>::ok(from_int(integer->value));
     }
 
     if (const auto *string = dynamic_cast<const StringLiteralExpression *>(&expression)) {
-        return from_text(decode_string_literal(string->lexeme));
+        return Result<Value>::ok(from_text(decode_string_literal(string->lexeme)));
     }
 
-    return from_text("");
+    return Result<Value>::fail(Error{"expected literal expression"});
+}
+
+std::int64_t Value::as_int() const {
+    assert(type == LogicalType::Int);
+    assert(payload_matches_type(type, payload));
+    return std::get<std::int64_t>(payload);
+}
+
+const std::string &Value::as_text() const {
+    assert(type == LogicalType::Text);
+    assert(payload_matches_type(type, payload));
+    return std::get<std::string>(payload);
 }
 
 } // namespace duradb

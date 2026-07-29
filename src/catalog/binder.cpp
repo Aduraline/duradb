@@ -11,7 +11,7 @@ bool is_literal_expression(const Expression &expression) {
 
 } // namespace
 
-Binder::Binder(const Catalog &catalog) : catalog_(catalog) {}
+Binder::Binder(const DatabaseEngine &engine) : engine_(engine) {}
 
 Result<BoundStatement> Binder::bind(Statement statement) const {
     switch (statement.kind) {
@@ -27,7 +27,7 @@ Result<BoundStatement> Binder::bind(Statement statement) const {
 }
 
 Result<BoundStatement> Binder::bind_create_table(const CreateTableStatement &statement) const {
-    if (catalog_.table_exists(statement.table)) {
+    if (engine_.table_exists(statement.table)) {
         return Result<BoundStatement>::fail(Error{"table already exists"});
     }
 
@@ -38,13 +38,9 @@ Result<BoundStatement> Binder::bind_create_table(const CreateTableStatement &sta
 }
 
 Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) const {
-    const TableSchema *table = catalog_.find_table(statement.table);
+    const TableSchema *table = engine_.find_table(statement.table);
     if (table == nullptr) {
         return Result<BoundStatement>::fail(Error{"table not found"});
-    }
-
-    if (statement.values.size() != table->columns.size()) {
-        return Result<BoundStatement>::fail(Error{"insert column count mismatch"});
     }
 
     BoundInsertStatement bound_insert;
@@ -56,10 +52,15 @@ Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) con
             return Result<BoundStatement>::fail(Error{"expected literal value in insert"});
         }
 
-        bound_insert.values.push_back(Value::from_expression(*value_expression));
+        Result<Value> literal = Value::from_expression(*value_expression);
+        if (!literal.has_value()) {
+            return Result<BoundStatement>::fail(literal.error());
+        }
+
+        bound_insert.values.push_back(std::move(literal.value()));
     }
 
-    if (const Status validation = catalog_.validate_insert(statement.table, bound_insert.values);
+    if (const Status validation = engine_.validate_insert(statement.table, bound_insert.values);
         !validation.has_value()) {
         return Result<BoundStatement>::fail(validation.error());
     }
@@ -71,7 +72,7 @@ Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) con
 }
 
 Result<BoundStatement> Binder::bind_select(SelectStatement statement) const {
-    const TableSchema *table = catalog_.find_table(statement.table);
+    const TableSchema *table = engine_.find_table(statement.table);
     if (table == nullptr) {
         return Result<BoundStatement>::fail(Error{"table not found"});
     }
@@ -79,7 +80,16 @@ Result<BoundStatement> Binder::bind_select(SelectStatement statement) const {
     BoundSelectStatement bound_select;
     bound_select.table = table;
     bound_select.select_all = statement.select_all;
-    bound_select.where = std::move(statement.where);
+
+    if (statement.where != nullptr) {
+        Result<std::unique_ptr<BoundExpression>> bound_where =
+            bind_expression(*statement.where, *table);
+        if (!bound_where.has_value()) {
+            return Result<BoundStatement>::fail(bound_where.error());
+        }
+
+        bound_select.where = std::move(bound_where.value());
+    }
 
     if (statement.select_all) {
         bound_select.column_ordinals.reserve(table->columns.size());
