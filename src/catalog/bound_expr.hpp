@@ -42,6 +42,9 @@ struct BoundExpression {
 Result<std::unique_ptr<BoundExpression>> bind_expression(const Expression &expression,
                                                          const TableSchema &schema);
 
-bool evaluate(const BoundExpression &expression, const Row &row);
+Status validate_bound_expression_ordinals(const BoundExpression &expression,
+                                          std::size_t column_count);
+
+Result<bool> evaluate(const BoundExpression &expression, const Row &row);
 
 } // namespace duradb

@@ -3,6 +3,8 @@
 #include "catalog/bound_expr.hpp"
 #include "storage/row.hpp"
 
+#include <optional>
+
 namespace duradb {
 
 Executor::Executor(DatabaseEngine &engine) : engine_(engine) {}
@@ -42,6 +44,22 @@ Result<ExecutionResult> Executor::execute_insert(BoundInsertStatement bound) {
 }
 
 Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
+    const std::size_t column_count = bound.table->columns.size();
+
+    for (const std::size_t ordinal : bound.column_ordinals) {
+        if (ordinal >= column_count) {
+            return Result<ExecutionResult>::fail(Error{"column ordinal out of range"});
+        }
+    }
+
+    if (bound.where != nullptr) {
+        if (const Status validation =
+                validate_bound_expression_ordinals(*bound.where, column_count);
+            !validation.has_value()) {
+            return Result<ExecutionResult>::fail(validation.error());
+        }
+    }
+
     ExecutionResult result;
     result.kind = ExecutionResult::Kind::Rows;
     result.column_names.reserve(bound.column_ordinals.size());
@@ -50,9 +68,23 @@ Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
         result.column_names.push_back(bound.table->columns[ordinal].name);
     }
 
+    std::optional<Error> evaluation_error;
+
     const Status scan_status = engine_.for_each_row(bound.table->name, [&](const Row &row) {
-        if (bound.where != nullptr && !evaluate(*bound.where, row)) {
+        if (evaluation_error.has_value()) {
             return;
+        }
+
+        if (bound.where != nullptr) {
+            Result<bool> matches = evaluate(*bound.where, row);
+            if (!matches.has_value()) {
+                evaluation_error = matches.error();
+                return;
+            }
+
+            if (!matches.value()) {
+                return;
+            }
         }
 
         std::vector<Value> projected;
@@ -64,6 +96,10 @@ Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
 
         result.rows.push_back(std::move(projected));
     });
+
+    if (evaluation_error.has_value()) {
+        return Result<ExecutionResult>::fail(*evaluation_error);
+    }
 
     if (!scan_status.has_value()) {
         return Result<ExecutionResult>::fail(scan_status.error());

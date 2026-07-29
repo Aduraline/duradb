@@ -51,7 +51,9 @@ TEST(EvaluateTest, ComparesIntegerColumnAgainstLiteral) {
     BoundExpression predicate = make_comparison(
         BoundComparisonOperator::Greater, make_column_ref(0, LogicalType::Int), make_int_literal(0));
 
-    EXPECT_TRUE(evaluate(predicate, row));
+    const auto result = evaluate(predicate, row);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result.value());
 }
 
 TEST(EvaluateTest, EvaluatesAndExpression) {
@@ -65,7 +67,9 @@ TEST(EvaluateTest, EvaluatesAndExpression) {
         BoundComparisonOperator::Equal, make_column_ref(1, LogicalType::Text),
         make_text_literal("Ada")));
 
-    EXPECT_TRUE(evaluate(predicate, row));
+    const auto result = evaluate(predicate, row);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result.value());
 }
 
 TEST(EvaluateTest, RejectsRowThatFailsPredicate) {
@@ -74,5 +78,23 @@ TEST(EvaluateTest, RejectsRowThatFailsPredicate) {
     BoundExpression predicate = make_comparison(
         BoundComparisonOperator::Greater, make_column_ref(0, LogicalType::Int), make_int_literal(0));
 
-    EXPECT_FALSE(evaluate(predicate, row));
+    const auto result = evaluate(predicate, row);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_FALSE(result.value());
+}
+
+TEST(EvaluateTest, RejectsOutOfRangeColumnOrdinal) {
+    Row row{{Value::from_int(1), Value::from_text("Ada")}};
+
+    BoundExpression predicate = make_comparison(
+        BoundComparisonOperator::Greater, make_column_ref(9, LogicalType::Int), make_int_literal(0));
+
+    EXPECT_FALSE(evaluate(predicate, row).has_value());
+}
+
+TEST(EvaluateTest, ValidatesExpressionOrdinalsAgainstSchema) {
+    BoundExpression predicate = make_comparison(
+        BoundComparisonOperator::Greater, make_column_ref(2, LogicalType::Int), make_int_literal(0));
+
+    EXPECT_FALSE(validate_bound_expression_ordinals(predicate, 2).has_value());
 }

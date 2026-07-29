@@ -145,19 +145,52 @@ Result<std::unique_ptr<BoundExpression>> bind_expression_impl(const Expression &
     return Result<std::unique_ptr<BoundExpression>>::ok(std::move(bound));
 }
 
-Value evaluate_value(const BoundExpression &expression, const Row &row) {
+Status validate_bound_expression_ordinals_impl(const BoundExpression &expression,
+                                               std::size_t column_count) {
+    if (expression.kind == BoundExpressionKind::ColumnRef) {
+        if (expression.column_ordinal >= column_count) {
+            return Status::fail(Error{"column ordinal out of range"});
+        }
+
+        return Status::ok(Unit{});
+    }
+
+    if (expression.left != nullptr) {
+        if (const Status left =
+                validate_bound_expression_ordinals_impl(*expression.left, column_count);
+            !left.has_value()) {
+            return left;
+        }
+    }
+
+    if (expression.right != nullptr) {
+        if (const Status right =
+                validate_bound_expression_ordinals_impl(*expression.right, column_count);
+            !right.has_value()) {
+            return right;
+        }
+    }
+
+    return Status::ok(Unit{});
+}
+
+Result<Value> evaluate_value(const BoundExpression &expression, const Row &row) {
     switch (expression.kind) {
     case BoundExpressionKind::Literal:
-        return expression.literal;
+        return Result<Value>::ok(expression.literal);
     case BoundExpressionKind::ColumnRef:
-        return row.values[expression.column_ordinal];
+        if (expression.column_ordinal >= row.values.size()) {
+            return Result<Value>::fail(Error{"column ordinal out of range"});
+        }
+
+        return Result<Value>::ok(row.values[expression.column_ordinal]);
     case BoundExpressionKind::Comparison:
     case BoundExpressionKind::And:
     case BoundExpressionKind::Or:
         break;
     }
 
-    return Value::from_int(0);
+    return Result<Value>::fail(Error{"unsupported value expression"});
 }
 
 bool compare_values(BoundComparisonOperator op, const Value &left, const Value &right) {
@@ -196,22 +229,57 @@ Result<std::unique_ptr<BoundExpression>> bind_expression(const Expression &expre
     return bind_expression_impl(expression, schema);
 }
 
-bool evaluate(const BoundExpression &expression, const Row &row) {
+Status validate_bound_expression_ordinals(const BoundExpression &expression,
+                                          std::size_t column_count) {
+    return validate_bound_expression_ordinals_impl(expression, column_count);
+}
+
+Result<bool> evaluate(const BoundExpression &expression, const Row &row) {
     switch (expression.kind) {
-    case BoundExpressionKind::Comparison:
-        return compare_values(expression.comparison_op,
-                              evaluate_value(*expression.left, row),
-                              evaluate_value(*expression.right, row));
-    case BoundExpressionKind::And:
-        return evaluate(*expression.left, row) && evaluate(*expression.right, row);
-    case BoundExpressionKind::Or:
-        return evaluate(*expression.left, row) || evaluate(*expression.right, row);
+    case BoundExpressionKind::Comparison: {
+        Result<Value> left = evaluate_value(*expression.left, row);
+        if (!left.has_value()) {
+            return Result<bool>::fail(left.error());
+        }
+
+        Result<Value> right = evaluate_value(*expression.right, row);
+        if (!right.has_value()) {
+            return Result<bool>::fail(right.error());
+        }
+
+        return Result<bool>::ok(
+            compare_values(expression.comparison_op, left.value(), right.value()));
+    }
+    case BoundExpressionKind::And: {
+        Result<bool> left = evaluate(*expression.left, row);
+        if (!left.has_value()) {
+            return left;
+        }
+
+        if (!left.value()) {
+            return Result<bool>::ok(false);
+        }
+
+        return evaluate(*expression.right, row);
+    }
+    case BoundExpressionKind::Or: {
+        Result<bool> left = evaluate(*expression.left, row);
+        if (!left.has_value()) {
+            return left;
+        }
+
+        if (left.value()) {
+            return Result<bool>::ok(true);
+        }
+
+        return evaluate(*expression.right, row);
+    }
     case BoundExpressionKind::Literal:
     case BoundExpressionKind::ColumnRef:
         break;
     }
 
-    return false;
+    return Result<bool>::fail(Error{"unsupported predicate expression"});
 }
 
 } // namespace duradb
