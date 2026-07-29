@@ -77,6 +77,19 @@ TEST(StorageTest, ScanProjectedSkipsUnneededColumns) {
     EXPECT_EQ(projected.front().as_text(), "Ada");
 }
 
+TEST(StorageTest, RejectsOutOfRangeProjectedOrdinal) {
+    DatabaseEngine engine;
+    ASSERT_TRUE(engine.create_table(users_schema()).has_value());
+    ASSERT_TRUE(
+        engine.insert("users", Row{{Value::from_int(1), Value::from_text("Ada")}}).has_value());
+
+    const std::size_t invalid_ordinal = 99;
+    EXPECT_FALSE(engine
+                     .scan_projected("users", std::span<const std::size_t>(&invalid_ordinal, 1),
+                                     [](const std::vector<duradb::Value> &) {})
+                     .has_value());
+}
+
 TEST(StorageTest, RejectsInsertIntoMissingTable) {
     DatabaseEngine engine;
     EXPECT_FALSE(engine.insert("users", Row{{Value::from_int(1)}}).has_value());

@@ -7,7 +7,6 @@
 #include "storage/row.hpp"
 
 #include <cstddef>
-#include <functional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -50,6 +49,15 @@ class DatabaseEngine {
             return Status::fail(Error{"table not found"});
         }
 
+        const std::size_t column_count = storage->schema.columns.size();
+
+        for (const std::size_t ordinal : column_ordinals) {
+            if (ordinal >= column_count) {
+                return Status::fail(Error{"column ordinal out of range"});
+            }
+        }
+
+        // TODO: pass row and ordinals to callback to avoid per-row allocation
         for (const Row &row : storage->rows) {
             std::vector<Value> projected;
             projected.reserve(column_ordinals.size());
