@@ -54,7 +54,7 @@ duradb/
 ├── CMakeLists.txt
 ├── src/
 │   ├── main.cpp
-│   └── frontend/       # SQL frontend (lexer, parser)
+│   └── frontend/       # SQL frontend (lexer, parser, ast)
 └── tests/              # unit tests (GoogleTest)
 ```
 
