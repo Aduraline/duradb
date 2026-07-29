@@ -52,8 +52,8 @@ void Repl::process_line(const std::string &line, std::ostream &output) {
         return;
     }
 
-    // TODO: bind against catalog
-    // TODO: execute CREATE TABLE, INSERT, and SELECT
+    // TODO: bind -> executor
+    // TODO: print result sets for SELECT
 
     output << "parsed successfully\n";
 }

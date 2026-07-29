@@ -25,7 +25,7 @@ struct BoundSelectStatement {
     const TableSchema *table;
     bool select_all;
     std::vector<std::size_t> column_ordinals;
-    std::unique_ptr<Expression> where; // TODO: bind to typed expression tree
+    std::unique_ptr<Expression> where; // TODO: typed bound expression for executor
 };
 
 struct BoundStatement {

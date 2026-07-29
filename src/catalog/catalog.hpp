@@ -20,7 +20,8 @@ class Catalog {
     Status validate_insert(std::string_view table_name, const std::vector<Value> &values) const;
 
   private:
-    std::unordered_map<std::string, TableSchema> tables_; // TODO: persist to storage pages
+    std::unordered_map<std::string, TableSchema> tables_; // TODO: persist via catalog pages
+    // TODO: column statistics for read-optimised planning
 };
 
 } // namespace duradb
