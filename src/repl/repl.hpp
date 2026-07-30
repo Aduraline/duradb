@@ -18,6 +18,10 @@ class Repl {
     void process_line(const std::string &line, std::ostream &output);
 
   private:
+    void process_sql(const std::string &sql, std::ostream &output);
+    bool read_sql_buffer(const std::string &first_line, std::istream &input, std::ostream &output,
+                         std::string &buffer, bool &multiline);
+
     Cluster cluster_;
     Session session_;
 };

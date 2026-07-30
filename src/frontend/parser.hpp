@@ -49,6 +49,8 @@ class Parser {
     ParseResult<std::unique_ptr<Expression>> parse_string_literal();
 
     bool is_comparison_operator(TokenKind kind) const;
+    bool match_statement_terminator();
+    ParseResult<Statement> finish_statement(Statement statement);
 };
 
 } // namespace duradb
