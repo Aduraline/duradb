@@ -136,8 +136,14 @@ TEST(ParserTest, ParsesCreateDatabaseStatement) {
     EXPECT_EQ(statement.create_database.database, "app");
 }
 
-TEST(ParserTest, RejectsMissingSemicolon) {
-    expect_parse_failure("SELECT name FROM users");
+TEST(ParserTest, ParsesSelectWithoutTrailingSemicolon) {
+    const auto result = parse_statement("SELECT name FROM users");
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value().kind, StatementKind::Select);
+}
+
+TEST(ParserTest, RejectsUnexpectedInputAfterStatement) {
+    expect_parse_failure("SELECT name FROM users extra");
 }
 
 TEST(ParserTest, RejectsInvalidStatement) {

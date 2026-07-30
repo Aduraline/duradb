@@ -78,6 +78,26 @@ ParseResult<Statement> Parser::parse_statement() {
     return fail("expected SELECT, CREATE, or INSERT statement");
 }
 
+bool Parser::match_statement_terminator() {
+    if (match(TokenKind::Semicolon)) {
+        return true;
+    }
+
+    return check(TokenKind::EndOfFile);
+}
+
+ParseResult<Statement> Parser::finish_statement(Statement statement) {
+    if (!match_statement_terminator()) {
+        return fail("expected ';'");
+    }
+
+    if (!check(TokenKind::EndOfFile)) {
+        return fail("unexpected input after statement");
+    }
+
+    return ParseResult<Statement>::ok(std::move(statement));
+}
+
 ParseResult<Statement> Parser::parse_select_statement() {
     if (!match(TokenKind::Select)) {
         return fail("expected SELECT");
@@ -125,14 +145,10 @@ ParseResult<Statement> Parser::parse_select_statement() {
         select.where = std::move(where.value());
     }
 
-    if (!match(TokenKind::Semicolon)) {
-        return fail("expected ';'");
-    }
-
     Statement statement;
     statement.kind = StatementKind::Select;
     statement.select = std::move(select);
-    return ParseResult<Statement>::ok(std::move(statement));
+    return finish_statement(std::move(statement));
 }
 
 ParseResult<Statement> Parser::parse_create_statement() {
@@ -168,14 +184,10 @@ ParseResult<Statement> Parser::parse_create_database_statement() {
     create_database.database = current_.lexeme;
     advance();
 
-    if (!match(TokenKind::Semicolon)) {
-        return fail("expected ';'");
-    }
-
     Statement statement;
     statement.kind = StatementKind::CreateDatabase;
     statement.create_database = create_database;
-    return ParseResult<Statement>::ok(std::move(statement));
+    return finish_statement(std::move(statement));
 }
 
 ParseResult<Statement> Parser::parse_create_schema_statement() {
@@ -191,14 +203,10 @@ ParseResult<Statement> Parser::parse_create_schema_statement() {
     create_schema.schema = current_.lexeme;
     advance();
 
-    if (!match(TokenKind::Semicolon)) {
-        return fail("expected ';'");
-    }
-
     Statement statement;
     statement.kind = StatementKind::CreateSchema;
     statement.create_schema = create_schema;
-    return ParseResult<Statement>::ok(std::move(statement));
+    return finish_statement(std::move(statement));
 }
 
 ParseResult<Statement> Parser::parse_create_table_statement() {
@@ -255,14 +263,10 @@ ParseResult<Statement> Parser::parse_create_table_statement() {
         return fail("expected ')'");
     }
 
-    if (!match(TokenKind::Semicolon)) {
-        return fail("expected ';'");
-    }
-
     Statement statement;
     statement.kind = StatementKind::CreateTable;
     statement.create_table = std::move(create_table);
-    return ParseResult<Statement>::ok(std::move(statement));
+    return finish_statement(std::move(statement));
 }
 
 ParseResult<Statement> Parser::parse_insert_statement() {
@@ -310,14 +314,10 @@ ParseResult<Statement> Parser::parse_insert_statement() {
         return fail("expected ')'");
     }
 
-    if (!match(TokenKind::Semicolon)) {
-        return fail("expected ';'");
-    }
-
     Statement statement;
     statement.kind = StatementKind::Insert;
     statement.insert = std::move(insert);
-    return ParseResult<Statement>::ok(std::move(statement));
+    return finish_statement(std::move(statement));
 }
 
 ParseResult<TableReference> Parser::parse_table_reference() {
