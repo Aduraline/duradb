@@ -1,5 +1,8 @@
 #pragma once
 
+#include "catalog/catalog_constants.hpp"
+#include "catalog/table_reference.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <string_view>
@@ -26,6 +29,8 @@ enum class BinaryOperator {
 enum class StatementKind {
     Select,
     CreateTable,
+    CreateSchema,
+    CreateDatabase,
     Insert,
 };
 
@@ -59,17 +64,25 @@ struct ColumnDefinition {
 struct SelectStatement {
     bool select_all{false};
     std::vector<std::unique_ptr<Expression>> columns;
-    std::string_view table;
+    TableReference table;
     std::unique_ptr<Expression> where;
 };
 
 struct CreateTableStatement {
-    std::string_view table;
+    TableReference table;
     std::vector<ColumnDefinition> columns;
 };
 
+struct CreateSchemaStatement {
+    std::string_view schema;
+};
+
+struct CreateDatabaseStatement {
+    std::string_view database;
+};
+
 struct InsertStatement {
-    std::string_view table;
+    TableReference table;
     std::vector<std::unique_ptr<Expression>> values;
 };
 
@@ -77,6 +90,8 @@ struct Statement {
     StatementKind kind;
     SelectStatement select;
     CreateTableStatement create_table;
+    CreateSchemaStatement create_schema;
+    CreateDatabaseStatement create_database;
     InsertStatement insert;
 };
 

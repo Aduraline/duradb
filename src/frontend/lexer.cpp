@@ -12,12 +12,15 @@ struct Keyword {
 };
 
 constexpr Keyword kKeywords[] = {
-    {"select", TokenKind::Select}, {"from", TokenKind::From},     {"where", TokenKind::Where},
-    {"insert", TokenKind::Insert}, {"into", TokenKind::Into},     {"create", TokenKind::Create},
-    {"table", TokenKind::Table},   {"values", TokenKind::Values}, {"int", TokenKind::Int},
-    {"text", TokenKind::Text},     {"and", TokenKind::And},       {"or", TokenKind::Or},
-    {"not", TokenKind::Not},       {"null", TokenKind::Null},     {"true", TokenKind::True},
-    {"false", TokenKind::False},
+    {"select", TokenKind::Select},   {"from", TokenKind::From},
+    {"where", TokenKind::Where},     {"insert", TokenKind::Insert},
+    {"into", TokenKind::Into},       {"create", TokenKind::Create},
+    {"table", TokenKind::Table},     {"schema", TokenKind::Schema},
+    {"database", TokenKind::Database}, {"values", TokenKind::Values},
+    {"int", TokenKind::Int},         {"text", TokenKind::Text},
+    {"and", TokenKind::And},         {"or", TokenKind::Or},
+    {"not", TokenKind::Not},         {"null", TokenKind::Null},
+    {"true", TokenKind::True},       {"false", TokenKind::False},
 };
 
 bool equals_ignore_case(std::string_view left, std::string_view right) {
@@ -54,6 +57,10 @@ const char *token_kind_name(TokenKind kind) {
         return "Create";
     case TokenKind::Table:
         return "Table";
+    case TokenKind::Schema:
+        return "Schema";
+    case TokenKind::Database:
+        return "Database";
     case TokenKind::Values:
         return "Values";
     case TokenKind::Int:
@@ -82,6 +89,8 @@ const char *token_kind_name(TokenKind kind) {
         return "Comma";
     case TokenKind::Semicolon:
         return "Semicolon";
+    case TokenKind::Dot:
+        return "Dot";
     case TokenKind::LParen:
         return "LParen";
     case TokenKind::RParen:
@@ -251,6 +260,8 @@ Token Lexer::scan_punctuation(char punctuation, SourceLocation start) {
         return make_token(TokenKind::Comma, start);
     case ';':
         return make_token(TokenKind::Semicolon, start);
+    case '.':
+        return make_token(TokenKind::Dot, start);
     case '(':
         return make_token(TokenKind::LParen, start);
     case ')':

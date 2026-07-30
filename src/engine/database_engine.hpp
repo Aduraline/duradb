@@ -1,20 +1,19 @@
 #pragma once
 
+#include "catalog/database_catalog.hpp"
 #include "catalog/schema.hpp"
 #include "catalog/value.hpp"
 #include "common/result.hpp"
-#include "common/string_view_hash.hpp"
 #include "storage/row.hpp"
 
 #include <cstddef>
 #include <span>
-#include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 namespace duradb {
 
+// Single-database facade over DatabaseCatalog for tests and legacy call sites.
 class DatabaseEngine {
   public:
     Status create_table(TableSchema schema);
@@ -29,61 +28,21 @@ class DatabaseEngine {
 
     template <typename RowFn>
     Status for_each_row(std::string_view table_name, RowFn &&row_fn) const {
-        const TableStorage *storage = find_storage(table_name);
-        if (storage == nullptr) {
-            return Status::fail(Error{"table not found"});
-        }
-
-        for (const Row &row : storage->rows) {
-            row_fn(row);
-        }
-
-        return Status::ok(Unit{});
+        return catalog_.for_each_row(kPublicSchema, table_name, std::forward<RowFn>(row_fn));
     }
 
     template <typename ProjectedRowFn>
     Status scan_projected(std::string_view table_name, std::span<const std::size_t> column_ordinals,
                           ProjectedRowFn &&projected_row_fn) const {
-        const TableStorage *storage = find_storage(table_name);
-        if (storage == nullptr) {
-            return Status::fail(Error{"table not found"});
-        }
-
-        const std::size_t column_count = storage->schema.columns.size();
-
-        for (const std::size_t ordinal : column_ordinals) {
-            if (ordinal >= column_count) {
-                return Status::fail(Error{"column ordinal out of range"});
-            }
-        }
-
-        // TODO: pass row and ordinals to callback to avoid per-row allocation
-        for (const Row &row : storage->rows) {
-            std::vector<Value> projected;
-            projected.reserve(column_ordinals.size());
-
-            for (const std::size_t ordinal : column_ordinals) {
-                projected.push_back(row.values[ordinal]);
-            }
-
-            projected_row_fn(projected);
-        }
-
-        return Status::ok(Unit{});
+        return catalog_.scan_projected(kPublicSchema, table_name, column_ordinals,
+                                       std::forward<ProjectedRowFn>(projected_row_fn));
     }
 
+    DatabaseCatalog &catalog() { return catalog_; }
+    const DatabaseCatalog &catalog() const { return catalog_; }
+
   private:
-    struct TableStorage {
-        TableSchema schema;
-        std::vector<Row> rows; // TODO: slotted pages via buffer pool
-    };
-
-    TableStorage *find_storage(std::string_view table_name);
-    const TableStorage *find_storage(std::string_view table_name) const;
-
-    std::unordered_map<std::string, TableStorage, StringViewHash, StringViewEqual>
-        tables_; // TODO: durable heap file on disk
-    // TODO: column statistics for read-optimised planning
+    DatabaseCatalog catalog_;
 };
 
 } // namespace duradb

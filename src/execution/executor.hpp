@@ -2,21 +2,23 @@
 
 #include "catalog/binder.hpp"
 #include "common/result.hpp"
-#include "engine/database_engine.hpp"
+#include "engine/session.hpp"
 #include "execution/execution_result.hpp"
 
 namespace duradb {
 
 class Executor {
   public:
-    explicit Executor(DatabaseEngine &engine);
+    explicit Executor(Session &session);
 
     Result<ExecutionResult> execute(BoundStatement bound);
 
   private:
-    DatabaseEngine &engine_;
+    Session &session_;
 
-    Result<ExecutionResult> execute_create(BoundCreateTableStatement bound);
+    Result<ExecutionResult> execute_create_table(BoundCreateTableStatement bound);
+    Result<ExecutionResult> execute_create_schema(BoundCreateSchemaStatement bound);
+    Result<ExecutionResult> execute_create_database(BoundCreateDatabaseStatement bound);
     Result<ExecutionResult> execute_insert(BoundInsertStatement bound);
     Result<ExecutionResult> execute_select(BoundSelectStatement bound);
 };

@@ -42,7 +42,8 @@ TEST(ParserTest, ParsesSelectWithWhereClause) {
     EXPECT_FALSE(statement.select.select_all);
     ASSERT_EQ(statement.select.columns.size(), 1U);
     EXPECT_EQ(as_column_ref(*statement.select.columns[0]).name, "name");
-    EXPECT_EQ(statement.select.table, "users");
+    EXPECT_EQ(statement.select.table.table, "users");
+    EXPECT_TRUE(statement.select.table.schema.empty());
     ASSERT_NE(statement.select.where, nullptr);
 
     const BinaryExpression &predicate = as_binary_expression(*statement.select.where);
@@ -59,7 +60,8 @@ TEST(ParserTest, ParsesSelectStar) {
     ASSERT_EQ(statement.kind, StatementKind::Select);
     EXPECT_TRUE(statement.select.select_all);
     EXPECT_TRUE(statement.select.columns.empty());
-    EXPECT_EQ(statement.select.table, "users");
+    EXPECT_EQ(statement.select.table.table, "users");
+    EXPECT_TRUE(statement.select.table.schema.empty());
     EXPECT_EQ(statement.select.where, nullptr);
 }
 
@@ -69,7 +71,8 @@ TEST(ParserTest, ParsesCreateTableStatement) {
 
     const duradb::Statement &statement = result.value();
     ASSERT_EQ(statement.kind, StatementKind::CreateTable);
-    EXPECT_EQ(statement.create_table.table, "users");
+    EXPECT_EQ(statement.create_table.table.table, "users");
+    EXPECT_TRUE(statement.create_table.table.schema.empty());
     ASSERT_EQ(statement.create_table.columns.size(), 2U);
     EXPECT_EQ(statement.create_table.columns[0].name, "id");
     EXPECT_EQ(statement.create_table.columns[0].type, LogicalType::Int);
@@ -83,7 +86,8 @@ TEST(ParserTest, ParsesInsertStatement) {
 
     const duradb::Statement &statement = result.value();
     ASSERT_EQ(statement.kind, StatementKind::Insert);
-    EXPECT_EQ(statement.insert.table, "users");
+    EXPECT_EQ(statement.insert.table.table, "users");
+    EXPECT_TRUE(statement.insert.table.schema.empty());
     ASSERT_EQ(statement.insert.values.size(), 2U);
     EXPECT_EQ(as_integer_literal(*statement.insert.values[0]).value, 1);
     EXPECT_EQ(as_string_literal(*statement.insert.values[1]).lexeme, "'Alice'");
@@ -102,6 +106,34 @@ TEST(ParserTest, ParsesAndExpressionWithPrecedence) {
     const BinaryExpression &name_predicate = as_binary_expression(*where.right);
     EXPECT_EQ(name_predicate.op, BinaryOperator::Equal);
     EXPECT_EQ(as_string_literal(*name_predicate.right).lexeme, "'Bob'");
+}
+
+TEST(ParserTest, ParsesQualifiedTableReference) {
+    const auto result = parse_statement("SELECT name FROM analytics.events WHERE id > 0;");
+    ASSERT_TRUE(result.has_value());
+
+    const duradb::Statement &statement = result.value();
+    ASSERT_EQ(statement.kind, StatementKind::Select);
+    EXPECT_EQ(statement.select.table.schema, "analytics");
+    EXPECT_EQ(statement.select.table.table, "events");
+}
+
+TEST(ParserTest, ParsesCreateSchemaStatement) {
+    const auto result = parse_statement("CREATE SCHEMA analytics;");
+    ASSERT_TRUE(result.has_value());
+
+    const duradb::Statement &statement = result.value();
+    ASSERT_EQ(statement.kind, StatementKind::CreateSchema);
+    EXPECT_EQ(statement.create_schema.schema, "analytics");
+}
+
+TEST(ParserTest, ParsesCreateDatabaseStatement) {
+    const auto result = parse_statement("CREATE DATABASE app;");
+    ASSERT_TRUE(result.has_value());
+
+    const duradb::Statement &statement = result.value();
+    ASSERT_EQ(statement.kind, StatementKind::CreateDatabase);
+    EXPECT_EQ(statement.create_database.database, "app");
 }
 
 TEST(ParserTest, RejectsMissingSemicolon) {

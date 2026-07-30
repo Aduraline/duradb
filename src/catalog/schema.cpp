@@ -22,7 +22,7 @@ std::optional<std::size_t> TableSchema::column_index(std::string_view name) cons
 
 TableSchema table_schema_from_ast(const CreateTableStatement &statement) {
     TableSchema schema;
-    schema.name = std::string(statement.table);
+    schema.name = std::string(statement.table.table);
 
     for (std::size_t index = 0; index < statement.columns.size(); ++index) {
         schema.columns.push_back(ColumnSchema{std::string(statement.columns[index].name),

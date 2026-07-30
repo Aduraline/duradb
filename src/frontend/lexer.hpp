@@ -14,6 +14,8 @@ enum class TokenKind {
     Into,
     Create,
     Table,
+    Schema,
+    Database,
     Values,
     Int,
     Text,
@@ -30,6 +32,7 @@ enum class TokenKind {
 
     Comma,
     Semicolon,
+    Dot,
     LParen,
     RParen,
     Star,
