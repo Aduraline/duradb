@@ -5,24 +5,26 @@
 #include <gtest/gtest.h>
 
 using duradb::BoundStatement;
-using duradb::DatabaseEngine;
+using duradb::Cluster;
 using duradb::ExecutionResult;
 using duradb::Executor;
+using duradb::Session;
 using duradb::test::bind_sql;
 
 TEST(IntegrationTest, ExecutesCreateInsertAndSelectThroughExecutor) {
-    DatabaseEngine engine;
-    Executor executor(engine);
+    Cluster cluster;
+    Session session(cluster);
+    Executor executor(session);
 
-    auto create = bind_sql(engine, "CREATE TABLE users (id INT, name TEXT);");
+    auto create = bind_sql(session, "CREATE TABLE users (id INT, name TEXT);");
     ASSERT_TRUE(create.has_value());
     ASSERT_TRUE(executor.execute(std::move(create.value())).has_value());
 
-    auto insert = bind_sql(engine, "INSERT INTO users VALUES (1, 'Ada');");
+    auto insert = bind_sql(session, "INSERT INTO users VALUES (1, 'Ada');");
     ASSERT_TRUE(insert.has_value());
     ASSERT_TRUE(executor.execute(std::move(insert.value())).has_value());
 
-    auto select = bind_sql(engine, "SELECT name FROM users WHERE id > 0;");
+    auto select = bind_sql(session, "SELECT name FROM users WHERE id > 0;");
     ASSERT_TRUE(select.has_value());
     ASSERT_EQ(select.value().kind, BoundStatement::Kind::Select);
 

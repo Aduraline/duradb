@@ -68,7 +68,7 @@ ParseResult<Statement> Parser::parse_statement() {
     }
 
     if (check(TokenKind::Create)) {
-        return parse_create_table_statement();
+        return parse_create_statement();
     }
 
     if (check(TokenKind::Insert)) {
@@ -109,12 +109,12 @@ ParseResult<Statement> Parser::parse_select_statement() {
         return fail("expected FROM");
     }
 
-    if (!check(TokenKind::Identifier)) {
-        return fail("expected table name");
+    ParseResult<TableReference> table = parse_table_reference();
+    if (!table.has_value()) {
+        return ParseResult<Statement>::fail(table.error());
     }
 
-    select.table = current_.lexeme;
-    advance();
+    select.table = table.value();
 
     if (match(TokenKind::Where)) {
         ParseResult<std::unique_ptr<Expression>> where = parse_expression();
@@ -135,22 +135,84 @@ ParseResult<Statement> Parser::parse_select_statement() {
     return ParseResult<Statement>::ok(std::move(statement));
 }
 
-ParseResult<Statement> Parser::parse_create_table_statement() {
+ParseResult<Statement> Parser::parse_create_statement() {
     if (!match(TokenKind::Create)) {
         return fail("expected CREATE");
     }
 
+    if (check(TokenKind::Database)) {
+        return parse_create_database_statement();
+    }
+
+    if (check(TokenKind::Schema)) {
+        return parse_create_schema_statement();
+    }
+
+    if (check(TokenKind::Table)) {
+        return parse_create_table_statement();
+    }
+
+    return fail("expected DATABASE, SCHEMA, or TABLE");
+}
+
+ParseResult<Statement> Parser::parse_create_database_statement() {
+    if (!match(TokenKind::Database)) {
+        return fail("expected DATABASE");
+    }
+
+    if (!check(TokenKind::Identifier)) {
+        return fail("expected database name");
+    }
+
+    CreateDatabaseStatement create_database;
+    create_database.database = current_.lexeme;
+    advance();
+
+    if (!match(TokenKind::Semicolon)) {
+        return fail("expected ';'");
+    }
+
+    Statement statement;
+    statement.kind = StatementKind::CreateDatabase;
+    statement.create_database = create_database;
+    return ParseResult<Statement>::ok(std::move(statement));
+}
+
+ParseResult<Statement> Parser::parse_create_schema_statement() {
+    if (!match(TokenKind::Schema)) {
+        return fail("expected SCHEMA");
+    }
+
+    if (!check(TokenKind::Identifier)) {
+        return fail("expected schema name");
+    }
+
+    CreateSchemaStatement create_schema;
+    create_schema.schema = current_.lexeme;
+    advance();
+
+    if (!match(TokenKind::Semicolon)) {
+        return fail("expected ';'");
+    }
+
+    Statement statement;
+    statement.kind = StatementKind::CreateSchema;
+    statement.create_schema = create_schema;
+    return ParseResult<Statement>::ok(std::move(statement));
+}
+
+ParseResult<Statement> Parser::parse_create_table_statement() {
     if (!match(TokenKind::Table)) {
         return fail("expected TABLE");
     }
 
-    if (!check(TokenKind::Identifier)) {
-        return fail("expected table name");
+    ParseResult<TableReference> table = parse_table_reference();
+    if (!table.has_value()) {
+        return ParseResult<Statement>::fail(table.error());
     }
 
     CreateTableStatement create_table;
-    create_table.table = current_.lexeme;
-    advance();
+    create_table.table = table.value();
 
     if (!match(TokenKind::LParen)) {
         return fail("expected '('");
@@ -212,13 +274,13 @@ ParseResult<Statement> Parser::parse_insert_statement() {
         return fail("expected INTO");
     }
 
-    if (!check(TokenKind::Identifier)) {
-        return fail("expected table name");
+    ParseResult<TableReference> table = parse_table_reference();
+    if (!table.has_value()) {
+        return ParseResult<Statement>::fail(table.error());
     }
 
     InsertStatement insert;
-    insert.table = current_.lexeme;
-    advance();
+    insert.table = table.value();
 
     if (!match(TokenKind::Values)) {
         return fail("expected VALUES");
@@ -256,6 +318,29 @@ ParseResult<Statement> Parser::parse_insert_statement() {
     statement.kind = StatementKind::Insert;
     statement.insert = std::move(insert);
     return ParseResult<Statement>::ok(std::move(statement));
+}
+
+ParseResult<TableReference> Parser::parse_table_reference() {
+    if (!check(TokenKind::Identifier)) {
+        return ParseResult<TableReference>::fail(make_error("expected table name"));
+    }
+
+    TableReference reference;
+    reference.schema = {};
+    reference.table = current_.lexeme;
+    advance();
+
+    if (match(TokenKind::Dot)) {
+        if (!check(TokenKind::Identifier)) {
+            return ParseResult<TableReference>::fail(make_error("expected table name"));
+        }
+
+        reference.schema = reference.table;
+        reference.table = current_.lexeme;
+        advance();
+    }
+
+    return ParseResult<TableReference>::ok(reference);
 }
 
 ParseResult<LogicalType> Parser::parse_column_type() {

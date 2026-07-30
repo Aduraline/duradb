@@ -14,10 +14,14 @@ target_compile_options(duradb_frontend PRIVATE -Wall -Wextra -Wpedantic)
 
 add_library(duradb_engine STATIC
     src/catalog/schema.cpp
+    src/catalog/schema_catalog.cpp
+    src/catalog/database_catalog.cpp
     src/catalog/value.cpp
     src/catalog/bound_expr.cpp
     src/catalog/binder.cpp
+    src/engine/cluster.cpp
     src/engine/database_engine.cpp
+    src/engine/session.cpp
     src/execution/executor.cpp
     src/storage/row.cpp
 )
@@ -70,6 +74,14 @@ target_link_libraries(engine_test PRIVATE duradb_engine GTest::gtest_main)
 target_compile_options(engine_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(engine_test)
+
+add_executable(catalog_test
+    tests/catalog_test.cpp
+)
+target_link_libraries(catalog_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(catalog_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(catalog_test)
 
 add_executable(binder_test
     tests/binder_test.cpp

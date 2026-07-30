@@ -31,3 +31,16 @@ TEST(ReplTest, ReportsExecutionError) {
     repl.process_line("SELECT name FROM users;", output);
     EXPECT_NE(output.str().find("error:"), std::string::npos);
 }
+
+TEST(ReplTest, ConnectsToAnotherDatabase) {
+    Repl repl;
+    std::ostringstream output;
+
+    repl.process_line("CREATE DATABASE app;", output);
+    repl.process_line("CREATE TABLE users (id INT);", output);
+    repl.process_line(".connect app", output);
+    repl.process_line("CREATE TABLE users (id INT);", output);
+
+    EXPECT_NE(output.str().find("OK"), std::string::npos);
+    EXPECT_EQ(output.str().find("error:"), std::string::npos);
+}

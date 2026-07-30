@@ -27,8 +27,13 @@ class Parser {
     ParseResult<Statement> fail(std::string message) const;
 
     ParseResult<Statement> parse_select_statement();
+    ParseResult<Statement> parse_create_statement();
     ParseResult<Statement> parse_create_table_statement();
+    ParseResult<Statement> parse_create_schema_statement();
+    ParseResult<Statement> parse_create_database_statement();
     ParseResult<Statement> parse_insert_statement();
+
+    ParseResult<TableReference> parse_table_reference();
 
     ParseResult<std::unique_ptr<Expression>> parse_expression();
     ParseResult<std::unique_ptr<Expression>> parse_or_expression();

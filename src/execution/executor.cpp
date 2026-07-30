@@ -7,20 +7,16 @@
 
 namespace duradb {
 
-namespace {
-
-const TableSchema *resolve_table(const DatabaseEngine &engine, std::string_view table_name) {
-    return engine.find_table(table_name);
-}
-
-} // namespace
-
-Executor::Executor(DatabaseEngine &engine) : engine_(engine) {}
+Executor::Executor(Session &session) : session_(session) {}
 
 Result<ExecutionResult> Executor::execute(BoundStatement bound) {
     switch (bound.kind) {
     case BoundStatement::Kind::CreateTable:
-        return execute_create(std::move(bound.create_table));
+        return execute_create_table(std::move(bound.create_table));
+    case BoundStatement::Kind::CreateSchema:
+        return execute_create_schema(std::move(bound.create_schema));
+    case BoundStatement::Kind::CreateDatabase:
+        return execute_create_database(std::move(bound.create_database));
     case BoundStatement::Kind::Insert:
         return execute_insert(std::move(bound.insert));
     case BoundStatement::Kind::Select:
@@ -30,8 +26,33 @@ Result<ExecutionResult> Executor::execute(BoundStatement bound) {
     return Result<ExecutionResult>::fail(Error{"unsupported statement"});
 }
 
-Result<ExecutionResult> Executor::execute_create(BoundCreateTableStatement bound) {
-    if (const Status status = engine_.create_table(std::move(bound.schema)); !status.has_value()) {
+Result<ExecutionResult> Executor::execute_create_table(BoundCreateTableStatement bound) {
+    DatabaseCatalog &catalog = session_.current_database_catalog();
+    if (const Status status =
+            catalog.create_table(bound.schema_name, std::move(bound.schema)); !status.has_value()) {
+        return Result<ExecutionResult>::fail(status.error());
+    }
+
+    ExecutionResult result;
+    result.kind = ExecutionResult::Kind::Ok;
+    return Result<ExecutionResult>::ok(std::move(result));
+}
+
+Result<ExecutionResult> Executor::execute_create_schema(BoundCreateSchemaStatement bound) {
+    DatabaseCatalog &catalog = session_.current_database_catalog();
+    if (const Status status = catalog.create_schema(std::move(bound.schema_name));
+        !status.has_value()) {
+        return Result<ExecutionResult>::fail(status.error());
+    }
+
+    ExecutionResult result;
+    result.kind = ExecutionResult::Kind::Ok;
+    return Result<ExecutionResult>::ok(std::move(result));
+}
+
+Result<ExecutionResult> Executor::execute_create_database(BoundCreateDatabaseStatement bound) {
+    if (const Status status = session_.cluster().create_database(std::move(bound.database_name));
+        !status.has_value()) {
         return Result<ExecutionResult>::fail(status.error());
     }
 
@@ -41,12 +62,13 @@ Result<ExecutionResult> Executor::execute_create(BoundCreateTableStatement bound
 }
 
 Result<ExecutionResult> Executor::execute_insert(BoundInsertStatement bound) {
-    if (resolve_table(engine_, bound.table_name) == nullptr) {
+    DatabaseCatalog &catalog = session_.current_database_catalog();
+    if (catalog.find_table(bound.schema_name, bound.table_name) == nullptr) {
         return Result<ExecutionResult>::fail(Error{"table not found"});
     }
 
-    if (const Status status =
-            engine_.insert(bound.table_name, Row{std::move(bound.values)}); !status.has_value()) {
+    if (const Status status = catalog.insert(bound.schema_name, bound.table_name,
+                                             Row{std::move(bound.values)}); !status.has_value()) {
         return Result<ExecutionResult>::fail(status.error());
     }
 
@@ -56,7 +78,8 @@ Result<ExecutionResult> Executor::execute_insert(BoundInsertStatement bound) {
 }
 
 Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
-    const TableSchema *table = resolve_table(engine_, bound.table_name);
+    const DatabaseCatalog &catalog = session_.current_database_catalog();
+    const TableSchema *table = catalog.find_table(bound.schema_name, bound.table_name);
     if (table == nullptr) {
         return Result<ExecutionResult>::fail(Error{"table not found"});
     }
@@ -91,32 +114,33 @@ Result<ExecutionResult> Executor::execute_select(BoundSelectStatement bound) {
 
     std::optional<Error> evaluation_error;
 
-    const Status scan_status = engine_.for_each_row(bound.table_name, [&](const Row &row) {
-        if (evaluation_error.has_value()) {
-            return;
-        }
-
-        if (bound.where != nullptr) {
-            Result<bool> matches = evaluate(*bound.where, row);
-            if (!matches.has_value()) {
-                evaluation_error = matches.error();
+    const Status scan_status =
+        catalog.for_each_row(bound.schema_name, bound.table_name, [&](const Row &row) {
+            if (evaluation_error.has_value()) {
                 return;
             }
 
-            if (!matches.value()) {
-                return;
+            if (bound.where != nullptr) {
+                Result<bool> matches = evaluate(*bound.where, row);
+                if (!matches.has_value()) {
+                    evaluation_error = matches.error();
+                    return;
+                }
+
+                if (!matches.value()) {
+                    return;
+                }
             }
-        }
 
-        std::vector<Value> projected;
-        projected.reserve(bound.column_ordinals.size());
+            std::vector<Value> projected;
+            projected.reserve(bound.column_ordinals.size());
 
-        for (const std::size_t ordinal : bound.column_ordinals) {
-            projected.push_back(row.values[ordinal]);
-        }
+            for (const std::size_t ordinal : bound.column_ordinals) {
+                projected.push_back(row.values[ordinal]);
+            }
 
-        result.rows.push_back(std::move(projected));
-    });
+            result.rows.push_back(std::move(projected));
+        });
 
     if (evaluation_error.has_value()) {
         return Result<ExecutionResult>::fail(*evaluation_error);

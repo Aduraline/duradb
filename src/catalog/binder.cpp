@@ -1,5 +1,7 @@
 #include "catalog/binder.hpp"
 
+#include "catalog/table_reference.hpp"
+
 namespace duradb {
 
 namespace {
@@ -11,12 +13,16 @@ bool is_literal_expression(const Expression &expression) {
 
 } // namespace
 
-Binder::Binder(const DatabaseEngine &engine) : engine_(engine) {}
+Binder::Binder(const Session &session) : session_(session) {}
 
 Result<BoundStatement> Binder::bind(Statement statement) const {
     switch (statement.kind) {
     case StatementKind::CreateTable:
         return bind_create_table(statement.create_table);
+    case StatementKind::CreateSchema:
+        return bind_create_schema(statement.create_schema);
+    case StatementKind::CreateDatabase:
+        return bind_create_database(statement.create_database);
     case StatementKind::Insert:
         return bind_insert(statement.insert);
     case StatementKind::Select:
@@ -27,24 +33,60 @@ Result<BoundStatement> Binder::bind(Statement statement) const {
 }
 
 Result<BoundStatement> Binder::bind_create_table(const CreateTableStatement &statement) const {
-    if (engine_.table_exists(statement.table)) {
+    const std::string schema_name = resolve_schema_name(statement.table.schema);
+    const std::string_view table_name = statement.table.table;
+
+    const DatabaseCatalog &catalog = session_.current_database_catalog();
+    if (!catalog.schema_exists(schema_name)) {
+        return Result<BoundStatement>::fail(Error{"schema not found"});
+    }
+
+    if (catalog.table_exists(schema_name, table_name)) {
         return Result<BoundStatement>::fail(Error{"table already exists"});
     }
 
     BoundStatement bound;
     bound.kind = BoundStatement::Kind::CreateTable;
+    bound.create_table.schema_name = schema_name;
     bound.create_table.schema = table_schema_from_ast(statement);
     return Result<BoundStatement>::ok(std::move(bound));
 }
 
+Result<BoundStatement> Binder::bind_create_schema(const CreateSchemaStatement &statement) const {
+    if (session_.current_database_catalog().schema_exists(statement.schema)) {
+        return Result<BoundStatement>::fail(Error{"schema already exists"});
+    }
+
+    BoundStatement bound;
+    bound.kind = BoundStatement::Kind::CreateSchema;
+    bound.create_schema.schema_name = std::string(statement.schema);
+    return Result<BoundStatement>::ok(std::move(bound));
+}
+
+Result<BoundStatement> Binder::bind_create_database(const CreateDatabaseStatement &statement) const {
+    if (session_.cluster().database_exists(statement.database)) {
+        return Result<BoundStatement>::fail(Error{"database already exists"});
+    }
+
+    BoundStatement bound;
+    bound.kind = BoundStatement::Kind::CreateDatabase;
+    bound.create_database.database_name = std::string(statement.database);
+    return Result<BoundStatement>::ok(std::move(bound));
+}
+
 Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) const {
-    const TableSchema *table = engine_.find_table(statement.table);
+    const std::string schema_name = resolve_schema_name(statement.table.schema);
+    const std::string_view table_name = statement.table.table;
+
+    const DatabaseCatalog &catalog = session_.current_database_catalog();
+    const TableSchema *table = catalog.find_table(schema_name, table_name);
     if (table == nullptr) {
         return Result<BoundStatement>::fail(Error{"table not found"});
     }
 
     BoundInsertStatement bound_insert;
-    bound_insert.table_name = std::string(statement.table);
+    bound_insert.schema_name = schema_name;
+    bound_insert.table_name = std::string(table_name);
     bound_insert.values.reserve(statement.values.size());
 
     for (const std::unique_ptr<Expression> &value_expression : statement.values) {
@@ -60,7 +102,8 @@ Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) con
         bound_insert.values.push_back(std::move(literal.value()));
     }
 
-    if (const Status validation = engine_.validate_insert(statement.table, bound_insert.values);
+    if (const Status validation =
+            catalog.validate_insert(schema_name, table_name, bound_insert.values);
         !validation.has_value()) {
         return Result<BoundStatement>::fail(validation.error());
     }
@@ -72,13 +115,18 @@ Result<BoundStatement> Binder::bind_insert(const InsertStatement &statement) con
 }
 
 Result<BoundStatement> Binder::bind_select(SelectStatement statement) const {
-    const TableSchema *table = engine_.find_table(statement.table);
+    const std::string schema_name = resolve_schema_name(statement.table.schema);
+    const std::string_view table_name = statement.table.table;
+
+    const DatabaseCatalog &catalog = session_.current_database_catalog();
+    const TableSchema *table = catalog.find_table(schema_name, table_name);
     if (table == nullptr) {
         return Result<BoundStatement>::fail(Error{"table not found"});
     }
 
     BoundSelectStatement bound_select;
-    bound_select.table_name = std::string(statement.table);
+    bound_select.schema_name = schema_name;
+    bound_select.table_name = std::string(table_name);
     bound_select.select_all = statement.select_all;
 
     if (statement.where != nullptr) {
