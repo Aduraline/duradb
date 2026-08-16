@@ -1,6 +1,6 @@
 # DuraDB
 
-A relational database engine in C++, built for high-throughput writes and low-latency reads. Early development; open source release planned.
+DuraDB is an HTAP database. OLTP and OLAP on the same tables, no ETL.
 
 ## Requirements
 
@@ -86,4 +86,4 @@ duradb/
 
 ## License
 
-TBD
+Apache 2.0. See [LICENSE](LICENSE).
