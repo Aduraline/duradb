@@ -27,6 +27,7 @@ add_library(duradb_engine STATIC
     src/storage/column_buffer.cpp
     src/storage/row.cpp
     src/storage/row_group.cpp
+    src/storage/table_storage.cpp
 )
 target_include_directories(duradb_engine PUBLIC src)
 target_link_libraries(duradb_engine PUBLIC duradb_frontend)
