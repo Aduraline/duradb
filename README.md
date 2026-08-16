@@ -84,6 +84,11 @@ duradb/
 └── tests/              # unit tests (GoogleTest)
 ```
 
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for build, test, and pull
+request guidelines.
+
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).

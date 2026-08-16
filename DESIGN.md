@@ -78,6 +78,36 @@ with transactional indexes where OLTP is required.
 
 ---
 
+## Flush semantics (as implemented)
+
+`TableStorage` holds one mutable **active row group** plus an ordered list of **sealed row
+groups**. Flush means sealing: `TableStorage::seal_active_if_full` moves the active row group
+into the sealed list and installs a fresh empty row group for the same schema. Sealed row
+groups are never mutated again.
+
+| Trigger | State |
+|---------|-------|
+| Active row group reaches `kRowGroupCapacity` (65536 rows) | Implemented |
+| Time or interval bound flush | Not implemented; future work |
+| Byte size or memory pressure bound flush | Not implemented; future work |
+| Writing sealed row groups to on disk segments, WAL, zone maps | Not implemented; future work |
+
+**Row appends.** `append_row` seals the active row group first when it is already full, so a
+row is never split across row groups.
+
+**Batch appends.** `append_column_batch` validates the batch against the schema, then slices it
+to the room left in the active row group, appends slice by slice, and seals whenever the group
+fills. A batch larger than the remaining capacity therefore spans several row groups; `TEXT`
+slices are re-sliced with offsets rebased to the slice.
+
+**Reader visibility.** `for_each_row` and `scan_projected` scan the sealed row groups in seal
+order and then the active row group, so a row is visible as soon as it is appended and sealing
+changes neither visibility nor row order. `row_count()` is the active row group plus all sealed
+row groups. Everything lives in memory today: sealing does not persist data, so state does not
+survive process restart.
+
+---
+
 ## Principles
 
 1. **Columnar by default.** Minimise I/O and enable SIMD; row heap is bootstrap only.
