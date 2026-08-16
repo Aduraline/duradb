@@ -1,6 +1,8 @@
 #include "catalog/schema_catalog.hpp"
 
+#include <algorithm>
 #include <cstdlib>
+#include <string>
 
 namespace duradb {
 
@@ -83,6 +85,17 @@ const TableSchema *SchemaCatalog::find_table(std::string_view table_name) const 
 
 bool SchemaCatalog::table_exists(std::string_view table_name) const {
     return find_storage(table_name) != nullptr;
+}
+
+std::vector<std::string> SchemaCatalog::table_names() const {
+    std::vector<std::string> names;
+    names.reserve(tables_.size());
+    for (const auto &entry : tables_) {
+        names.push_back(std::string(entry.first));
+    }
+
+    std::sort(names.begin(), names.end());
+    return names;
 }
 
 Status SchemaCatalog::validate_insert(std::string_view table_name,

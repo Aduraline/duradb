@@ -19,6 +19,7 @@ class Repl {
 
   private:
     void process_sql(const std::string &sql, std::ostream &output);
+    void print_tables(std::ostream &output);
     bool read_sql_buffer(const std::string &first_line, std::istream &input, std::ostream &output,
                          std::string &buffer, bool &multiline);
 

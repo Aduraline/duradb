@@ -75,3 +75,23 @@ TEST(ReplTest, ConnectsToAnotherDatabase) {
     EXPECT_NE(output.str().find("OK"), std::string::npos);
     EXPECT_EQ(output.str().find("error:"), std::string::npos);
 }
+
+TEST(ReplTest, TablesCommandListsCreatedTables) {
+    Repl repl;
+    std::ostringstream output;
+
+    repl.process_line("CREATE TABLE users (id INT, name TEXT);", output);
+    repl.process_line("CREATE TABLE orders (id INT);", output);
+    output.str("");
+
+    repl.process_line(".tables", output);
+    EXPECT_EQ(output.str(), "orders\nusers\n");
+}
+
+TEST(ReplTest, TablesCommandIsEmptyForFreshDatabase) {
+    Repl repl;
+    std::ostringstream output;
+
+    repl.process_line(".tables", output);
+    EXPECT_EQ(output.str(), "");
+}
