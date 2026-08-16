@@ -68,6 +68,15 @@ bool DatabaseCatalog::table_exists(std::string_view schema_name,
     return find_table(schema_name, table_name) != nullptr;
 }
 
+std::vector<std::string> DatabaseCatalog::table_names(std::string_view schema_name) const {
+    const SchemaCatalog *schema_catalog = find_schema(schema_name);
+    if (schema_catalog == nullptr) {
+        return {};
+    }
+
+    return schema_catalog->table_names();
+}
+
 Status DatabaseCatalog::validate_insert(std::string_view schema_name, std::string_view table_name,
                                         const std::vector<Value> &values) const {
     const SchemaCatalog *schema_catalog = find_schema(schema_name);

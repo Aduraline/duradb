@@ -25,6 +25,10 @@ bool is_connect_command(std::string_view line) {
     return line.starts_with(".connect ");
 }
 
+bool is_tables_command(std::string_view line) {
+    return line == ".tables";
+}
+
 std::string_view connect_target(std::string_view line) {
     return line.substr(std::string_view(".connect ").size());
 }
@@ -70,6 +74,7 @@ bool needs_continuation(std::string_view sql) {
 void print_help(std::ostream &output) {
     output << "Commands:\n";
     output << "  .help              show this message\n";
+    output << "  .tables            list tables in the current schema\n";
     output << "  .connect <db>      switch to another database\n";
     output << "  .quit              exit the shell\n";
     output << "SQL:\n";
@@ -128,6 +133,13 @@ void print_execution_result(const ExecutionResult &result, std::ostream &output)
 } // namespace
 
 Repl::Repl(std::string database_name) : session_(cluster_, std::move(database_name)) {}
+
+void Repl::print_tables(std::ostream &output) {
+    for (const std::string &name :
+         session_.current_database_catalog().table_names(kPublicSchema)) {
+        output << name << '\n';
+    }
+}
 
 void Repl::process_sql(const std::string &sql, std::ostream &output) {
     Parser parser(sql);
@@ -212,6 +224,11 @@ void Repl::process_line(const std::string &line, std::ostream &output) {
         return;
     }
 
+    if (is_tables_command(line)) {
+        print_tables(output);
+        return;
+    }
+
     process_sql(line, output);
 }
 
@@ -237,7 +254,7 @@ int Repl::run(std::istream &input, std::ostream &output) {
             continue;
         }
 
-        if (is_help_command(line) || is_connect_command(line)) {
+        if (is_help_command(line) || is_connect_command(line) || is_tables_command(line)) {
             process_line(line, output);
             continue;
         }

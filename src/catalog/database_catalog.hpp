@@ -7,6 +7,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace duradb {
 
@@ -23,6 +24,8 @@ class DatabaseCatalog {
 
     const TableSchema *find_table(std::string_view schema_name, std::string_view table_name) const;
     bool table_exists(std::string_view schema_name, std::string_view table_name) const;
+
+    std::vector<std::string> table_names(std::string_view schema_name) const;
 
     Status validate_insert(std::string_view schema_name, std::string_view table_name,
                            const std::vector<Value> &values) const;

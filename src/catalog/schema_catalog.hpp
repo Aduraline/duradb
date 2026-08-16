@@ -28,6 +28,8 @@ class SchemaCatalog {
     const TableSchema *find_table(std::string_view table_name) const;
     bool table_exists(std::string_view table_name) const;
 
+    std::vector<std::string> table_names() const;
+
     Status validate_insert(std::string_view table_name, const std::vector<Value> &values) const;
 
     Status insert(std::string_view table_name, Row row);
