@@ -29,4 +29,8 @@ Status DatabaseEngine::insert_batch(std::string_view table_name, std::span<Row> 
     return catalog_.insert_batch(kPublicSchema, table_name, rows);
 }
 
+Status DatabaseEngine::insert_columnar_batch(std::string_view table_name, const ColumnBatch &batch) {
+    return catalog_.insert_columnar_batch(kPublicSchema, table_name, batch);
+}
+
 } // namespace duradb

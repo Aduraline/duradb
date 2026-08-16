@@ -30,6 +30,8 @@ class DatabaseCatalog {
     Status insert(std::string_view schema_name, std::string_view table_name, Row row);
     Status insert_batch(std::string_view schema_name, std::string_view table_name,
                         std::span<Row> rows);
+    Status insert_columnar_batch(std::string_view schema_name, std::string_view table_name,
+                                 const ColumnBatch &batch);
 
     template <typename RowFn>
     Status for_each_row(std::string_view schema_name, std::string_view table_name,

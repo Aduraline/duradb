@@ -1,6 +1,7 @@
 #include "catalog/database_catalog.hpp"
 
 #include "catalog/catalog_constants.hpp"
+#include "storage/column_batch.hpp"
 
 namespace duradb {
 
@@ -94,6 +95,17 @@ Status DatabaseCatalog::insert_batch(std::string_view schema_name, std::string_v
     }
 
     return schema_catalog->insert_batch(table_name, rows);
+}
+
+Status DatabaseCatalog::insert_columnar_batch(std::string_view schema_name,
+                                              std::string_view table_name,
+                                              const ColumnBatch &batch) {
+    SchemaCatalog *schema_catalog = find_schema_mut(schema_name);
+    if (schema_catalog == nullptr) {
+        return Status::fail(Error{"schema not found"});
+    }
+
+    return schema_catalog->insert_columnar_batch(table_name, batch);
 }
 
 } // namespace duradb
