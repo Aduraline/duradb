@@ -4,7 +4,9 @@
 #include "catalog/value.hpp"
 #include "common/result.hpp"
 #include "common/string_view_hash.hpp"
+#include "storage/column_batch.hpp"
 #include "storage/row.hpp"
+#include "storage/table_storage.hpp"
 
 #include <cstddef>
 #include <span>
@@ -30,6 +32,7 @@ class SchemaCatalog {
 
     Status insert(std::string_view table_name, Row row);
     Status insert_batch(std::string_view table_name, std::span<Row> rows);
+    Status insert_columnar_batch(std::string_view table_name, const ColumnBatch &batch);
 
     template <typename RowFn>
     Status for_each_row(std::string_view table_name, RowFn &&row_fn) const {
@@ -38,11 +41,7 @@ class SchemaCatalog {
             return Status::fail(Error{"table not found"});
         }
 
-        for (const Row &row : storage->rows) {
-            row_fn(row);
-        }
-
-        return Status::ok(Unit{});
+        return storage->for_each_row(std::forward<RowFn>(row_fn));
     }
 
     template <typename ProjectedRowFn>
@@ -53,34 +52,10 @@ class SchemaCatalog {
             return Status::fail(Error{"table not found"});
         }
 
-        const std::size_t column_count = storage->schema.columns.size();
-
-        for (const std::size_t ordinal : column_ordinals) {
-            if (ordinal >= column_count) {
-                return Status::fail(Error{"column ordinal out of range"});
-            }
-        }
-
-        for (const Row &row : storage->rows) {
-            std::vector<Value> projected;
-            projected.reserve(column_ordinals.size());
-
-            for (const std::size_t ordinal : column_ordinals) {
-                projected.push_back(row.values[ordinal]);
-            }
-
-            projected_row_fn(projected);
-        }
-
-        return Status::ok(Unit{});
+        return storage->scan_projected(column_ordinals, std::forward<ProjectedRowFn>(projected_row_fn));
     }
 
   private:
-    struct TableStorage {
-        TableSchema schema;
-        std::vector<Row> rows;
-    };
-
     TableStorage *find_storage(std::string_view table_name);
     const TableStorage *find_storage(std::string_view table_name) const;
 

@@ -23,7 +23,11 @@ add_library(duradb_engine STATIC
     src/engine/database_engine.cpp
     src/engine/session.cpp
     src/execution/executor.cpp
+    src/storage/column_batch.cpp
+    src/storage/column_buffer.cpp
     src/storage/row.cpp
+    src/storage/row_group.cpp
+    src/storage/table_storage.cpp
 )
 target_include_directories(duradb_engine PUBLIC src)
 target_link_libraries(duradb_engine PUBLIC duradb_frontend)
@@ -144,6 +148,14 @@ target_link_libraries(row_test PRIVATE duradb_engine GTest::gtest_main)
 target_compile_options(row_test PRIVATE -Wall -Wextra -Wpedantic)
 
 gtest_discover_tests(row_test)
+
+add_executable(row_group_test
+    tests/row_group_test.cpp
+)
+target_link_libraries(row_group_test PRIVATE duradb_engine GTest::gtest_main)
+target_compile_options(row_group_test PRIVATE -Wall -Wextra -Wpedantic)
+
+gtest_discover_tests(row_group_test)
 
 add_executable(value_test
     tests/value_test.cpp

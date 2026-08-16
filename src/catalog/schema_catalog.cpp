@@ -32,7 +32,7 @@ SchemaCatalog::SchemaCatalog(std::string name) : name_(std::move(name)) {}
 
 std::string_view SchemaCatalog::name() const { return name_; }
 
-SchemaCatalog::TableStorage *SchemaCatalog::find_storage(std::string_view table_name) {
+TableStorage *SchemaCatalog::find_storage(std::string_view table_name) {
     const auto iterator = tables_.find(table_name);
     if (iterator == tables_.end()) {
         return nullptr;
@@ -41,8 +41,7 @@ SchemaCatalog::TableStorage *SchemaCatalog::find_storage(std::string_view table_
     return &iterator->second;
 }
 
-const SchemaCatalog::TableStorage *
-SchemaCatalog::find_storage(std::string_view table_name) const {
+const TableStorage *SchemaCatalog::find_storage(std::string_view table_name) const {
     const auto iterator = tables_.find(table_name);
     if (iterator == tables_.end()) {
         return nullptr;
@@ -69,7 +68,7 @@ Status SchemaCatalog::create_table(TableSchema schema) {
     }
 
     const std::string table_name = schema.name;
-    tables_.emplace(table_name, TableStorage{std::move(schema), {}});
+    tables_.emplace(table_name, TableStorage{std::move(schema)});
     return Status::ok(Unit{});
 }
 
@@ -79,7 +78,7 @@ const TableSchema *SchemaCatalog::find_table(std::string_view table_name) const 
         return nullptr;
     }
 
-    return &storage->schema;
+    return &storage->schema();
 }
 
 bool SchemaCatalog::table_exists(std::string_view table_name) const {
@@ -103,11 +102,10 @@ Status SchemaCatalog::insert(std::string_view table_name, Row row) {
     }
 
 #ifndef NDEBUG
-    assert_row_matches_schema(row, storage->schema);
+    assert_row_matches_schema(row, storage->schema());
 #endif
 
-    storage->rows.push_back(std::move(row));
-    return Status::ok(Unit{});
+    return storage->append_row(std::move(row));
 }
 
 Status SchemaCatalog::insert_batch(std::string_view table_name, std::span<Row> rows) {
@@ -122,16 +120,21 @@ Status SchemaCatalog::insert_batch(std::string_view table_name, std::span<Row> r
 
 #ifndef NDEBUG
     for (const Row &row : rows) {
-        assert_row_matches_schema(row, storage->schema);
+        assert_row_matches_schema(row, storage->schema());
     }
 #endif
 
-    storage->rows.reserve(storage->rows.size() + rows.size());
-    for (Row &row : rows) {
-        storage->rows.push_back(std::move(row));
+    return storage->append_rows(rows);
+}
+
+Status SchemaCatalog::insert_columnar_batch(std::string_view table_name,
+                                            const ColumnBatch &batch) {
+    TableStorage *storage = find_storage(table_name);
+    if (storage == nullptr) {
+        return Status::fail(Error{"table not found"});
     }
 
-    return Status::ok(Unit{});
+    return storage->append_column_batch(batch);
 }
 
 } // namespace duradb

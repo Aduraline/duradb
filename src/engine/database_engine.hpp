@@ -4,6 +4,7 @@
 #include "catalog/schema.hpp"
 #include "catalog/value.hpp"
 #include "common/result.hpp"
+#include "storage/column_batch.hpp"
 #include "storage/row.hpp"
 
 #include <cstddef>
@@ -25,6 +26,7 @@ class DatabaseEngine {
 
     Status insert(std::string_view table_name, Row row);
     Status insert_batch(std::string_view table_name, std::span<Row> rows);
+    Status insert_columnar_batch(std::string_view table_name, const ColumnBatch &batch);
 
     template <typename RowFn>
     Status for_each_row(std::string_view table_name, RowFn &&row_fn) const {
