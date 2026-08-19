@@ -25,6 +25,10 @@ bool is_connect_command(std::string_view line) {
     return line.starts_with(".connect ");
 }
 
+bool is_tables_command(std::string_view line) {
+    return line == ".tables";
+}
+
 std::string_view connect_target(std::string_view line) {
     return line.substr(std::string_view(".connect ").size());
 }
@@ -71,6 +75,7 @@ void print_help(std::ostream &output) {
     output << "Commands:\n";
     output << "  .help              show this message\n";
     output << "  .connect <db>      switch to another database\n";
+    output << "  .tables             list all tables in the current database\n";
     output << "  .quit              exit the shell\n";
     output << "SQL:\n";
     output << "  CREATE DATABASE ...;\n";
@@ -196,6 +201,14 @@ void Repl::process_line(const std::string &line, std::ostream &output) {
         return;
     }
 
+   if (is_tables_command(line)) {
+      const std::vector<std::string> tables = session_.list_tables();
+      for (const auto &table : tables) {
+          output << table << '\n';
+      }
+      return;
+  }
+
     if (is_connect_command(line)) {
         const std::string_view database_name = connect_target(line);
         if (database_name.empty()) {
@@ -237,7 +250,7 @@ int Repl::run(std::istream &input, std::ostream &output) {
             continue;
         }
 
-        if (is_help_command(line) || is_connect_command(line)) {
+        if (is_help_command(line) || is_connect_command(line) || is_tables_command(line)) {
             process_line(line, output);
             continue;
         }
